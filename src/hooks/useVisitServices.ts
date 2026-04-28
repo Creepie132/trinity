@@ -61,6 +61,41 @@ export function useRemoveVisitService(visitId: string) {
   })
 }
 
+export function useUpdateVisitServiceQty(visitId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ serviceId, quantity }: { serviceId: string; quantity: number }) => {
+      const response = await fetch(`/api/visits/${visitId}/services/${serviceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity }),
+      })
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to update quantity')
+      }
+      return (await response.json()).service as VisitService
+    },
+    // Optimistic update — меняем в кэше немедленно
+    onMutate: async ({ serviceId, quantity }) => {
+      await queryClient.cancelQueries({ queryKey: ['visit-services', visitId] })
+      const prev = queryClient.getQueryData<VisitService[]>(['visit-services', visitId])
+      queryClient.setQueryData<VisitService[]>(['visit-services', visitId], old =>
+        (old ?? []).map(vs => vs.id === serviceId ? { ...vs, quantity } : vs)
+      )
+      return { prev }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.prev) {
+        queryClient.setQueryData(['visit-services', visitId], context.prev)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['visit-services', visitId] })
+    },
+  })
+}
+
 export function useUpdateVisitStatus(visitId: string) {
   const queryClient = useQueryClient()
   return useMutation({

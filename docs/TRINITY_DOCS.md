@@ -1,25 +1,26 @@
 # Trinity CRM — Полная документация
-> Amber Solutions · ambersol.co.il · Последнее обновление: 20.04.2026
+
+> Amber Solutions · [ambersol.co.il](http://ambersol.co.il) · Последнее обновление: 20.04.2026
 
 ---
 
 ## 📋 Содержание
 
-1. [Обзор проекта](#1-обзор-проекта)
-2. [Инфраструктура](#2-инфраструктура)
-3. [Архитектура](#3-архитектура)
-4. [База данных — таблицы и схема](#4-база-данных)
-5. [RLS и безопасность](#5-rls-и-безопасность)
-6. [Аутентификация и роли](#6-аутентификация-и-роли)
-7. [Ветки (филиалы)](#7-ветки-филиалы)
-8. [Платежи и Tranzila](#8-платежи-и-tranzila)
-9. [WhatsApp (Whapi)](#9-whatsapp-whapi)
-10. [Лендинг /landing](#10-лендинг-landing)
-11. [UI-компоненты](#11-ui-компоненты)
-12. [Демо-режим](#13-демо-режим)
-13. [Beautymania интеграция](#14-beautymania-интеграция)
-14. [Kira AI агент](#15-kira-ai-агент)
-15. [Правила разработки](#16-правила-разработки)
+ 1. [Обзор проекта](#1-%D0%BE%D0%B1%D0%B7%D0%BE%D1%80-%D0%BF%D1%80%D0%BE%D0%B5%D0%BA%D1%82%D0%B0)
+ 2. [Инфраструктура](#2-%D0%B8%D0%BD%D1%84%D1%80%D0%B0%D1%81%D1%82%D1%80%D1%83%D0%BA%D1%82%D1%83%D1%80%D0%B0)
+ 3. [Архитектура](#3-%D0%B0%D1%80%D1%85%D0%B8%D1%82%D0%B5%D0%BA%D1%82%D1%83%D1%80%D0%B0)
+ 4. [База данных — таблицы и схема](#4-%D0%B1%D0%B0%D0%B7%D0%B0-%D0%B4%D0%B0%D0%BD%D0%BD%D1%8B%D1%85)
+ 5. [RLS и безопасность](#5-rls-%D0%B8-%D0%B1%D0%B5%D0%B7%D0%BE%D0%BF%D0%B0%D1%81%D0%BD%D0%BE%D1%81%D1%82%D1%8C)
+ 6. [Аутентификация и роли](#6-%D0%B0%D1%83%D1%82%D0%B5%D0%BD%D1%82%D0%B8%D1%84%D0%B8%D0%BA%D0%B0%D1%86%D0%B8%D1%8F-%D0%B8-%D1%80%D0%BE%D0%BB%D0%B8)
+ 7. [Ветки (филиалы)](#7-%D0%B2%D0%B5%D1%82%D0%BA%D0%B8-%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB%D1%8B)
+ 8. [Платежи и Tranzila](#8-%D0%BF%D0%BB%D0%B0%D1%82%D0%B5%D0%B6%D0%B8-%D0%B8-tranzila)
+ 9. [WhatsApp (Whapi)](#9-whatsapp-whapi)
+10. [Лендинг /landing](#10-%D0%BB%D0%B5%D0%BD%D0%B4%D0%B8%D0%BD%D0%B3-landing)
+11. [UI-компоненты](#11-ui-%D0%BA%D0%BE%D0%BC%D0%BF%D0%BE%D0%BD%D0%B5%D0%BD%D1%82%D1%8B)
+12. [Демо-режим](#13-%D0%B4%D0%B5%D0%BC%D0%BE-%D1%80%D0%B5%D0%B6%D0%B8%D0%BC)
+13. [Beautymania интеграция](#14-beautymania-%D0%B8%D0%BD%D1%82%D0%B5%D0%B3%D1%80%D0%B0%D1%86%D0%B8%D1%8F)
+14. [Kira AI агент](#15-kira-ai-%D0%B0%D0%B3%D0%B5%D0%BD%D1%82)
+15. [Правила разработки](#16-%D0%BF%D1%80%D0%B0%D0%B2%D0%B8%D0%BB%D0%B0-%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BA%D0%B8)
 16. [Changelog — апрель 2026](#17-changelog)
 
 ---
@@ -28,47 +29,26 @@
 
 **Trinity CRM** — SaaS CRM-платформа для малого бизнеса в Израиле: салоны, барбершопы, клиники, автомастерские, юристы, риелторы.
 
-| Параметр | Значение |
-|---|---|
-| Продукт | Trinity CRM |
-| Домен | https://ambersol.co.il |
-| GitHub | github.com/Creepie132/trinity |
-| Локальный путь | `F:\Amber_solutions_Kira\Trinity` |
-| Stack | Next.js App Router, Supabase, TypeScript, Tailwind CSS |
-| Деплой | Vercel |
-| Текущие клиенты | Beautymania (Анета), Hair Rehab (Ксения) |
+ПараметрЗначениеПродуктTrinity CRMДомен<https://ambersol.co.il>GitHub[github.com/Creepie132/trinity](http://github.com/Creepie132/trinity)Локальный путь`F:\Amber_solutions_Kira\Trinity`StackNext.js App Router, Supabase, TypeScript, Tailwind CSSДеплойVercelТекущие клиентыBeautymania (Анета), Hair Rehab (Ксения)
 
 ### Тарифные планы
 
-| План | Цена | Назначение |
-|---|---|---|
-| Base | ₪199/мес | Старт, клиенты, визиты, склад |
-| Pro | ₪249/мес | + онлайн-запись, статистика, SMS |
-| Enterprise | ₪499/мес | + филиалы, лояльность, до 5 сотрудников |
-| Custom | по выбору | Индивидуальные модули |
-| Настройка | ₪500 разово | Выезд + настройка + обучение |
+ПланЦенаНазначениеBase₪199/месСтарт, клиенты, визиты, складPro₪249/мес+ онлайн-запись, статистика, SMSEnterprise₪499/мес+ филиалы, лояльность, до 5 сотрудниковCustomпо выборуИндивидуальные модулиНастройка₪500 разовоВыезд + настройка + обучение
 
 ---
 
 ## 2. Инфраструктура
 
 ### Vercel
-| Параметр | Значение |
-|---|---|
-| Team ID | `team_LMjQcFhJbvsscDS6v1qU2If9` |
-| Project ID | `prj_4LI8wdySl50XqA52ymhhC4IcY8JI` |
-| Build Machine | Basic |
-| Preview URL | push в `main` |
-| Production | `git push origin main:production` |
+
+ПараметрЗначениеTeam ID`team_LMjQcFhJbvsscDS6v1qU2If9`Project ID`prj_4LI8wdySl50XqA52ymhhC4IcY8JI`Build MachineBasicPreview URLpush в `main`Production`git push origin main:production`
 
 ### Supabase
-| Параметр | Значение |
-|---|---|
-| Project ID | `tjryzcqvsavtllahjyrj` |
-| Region | eu-central-1 |
-| Realtime | включён для `wa_conversations`, `wa_messages`, `site_orders` |
+
+ПараметрЗначениеProject ID`tjryzcqvsavtllahjyrj`Regioneu-central-1Realtimeвключён для `wa_conversations`, `wa_messages`, `site_orders`
 
 ### Переменные окружения (`.env.local`)
+
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
@@ -86,6 +66,7 @@ NEXT_PUBLIC_APP_URL=https://www.ambersol.co.il
 ```
 
 ### Деплой-процедура (ОБЯЗАТЕЛЬНО)
+
 ```powershell
 # 1. Чистый билд
 npm run build     # должен завершиться без ошибок
@@ -98,6 +79,7 @@ git push origin main
 # 3. Выход в production
 git push origin main:production
 ```
+
 **Никогда не деплоить вслепую без чистого билда.**
 
 ---
@@ -105,6 +87,7 @@ git push origin main:production
 ## 3. Архитектура
 
 ### Стек
+
 - **Frontend**: Next.js 16 App Router, React 18, TypeScript
 - **Стили**: Tailwind CSS, shadcn/ui, Lucide React
 - **Состояние**: React Query (TanStack Query v5), Zustand (минимально)
@@ -115,6 +98,7 @@ git push origin main:production
 - **Деплой**: Vercel
 
 ### Структура директорий
+
 ```
 src/
 ├── app/
@@ -154,44 +138,18 @@ src/
 └── types/                    # TypeScript типы
 ```
 
-
 ---
 
 ## 4. База данных
 
 ### Ключевые таблицы
 
-| Таблица | Назначение | Ключевые колонки |
-|---|---|---|
-| `organizations` | Одна запись = один клиент Trinity | id, name, features(jsonb), plan, subscription_status |
-| `org_users` | Членство пользователей в org | user_id, org_id, role |
-| `branches` | Филиал → родительская org | id, parent_org_id, child_org_id |
-| `user_active_branch` | Активная ветка пользователя | user_id, active_org_id |
-| `clients` | CRM-клиенты бизнеса | id, org_id, first_name, last_name, phone, email |
-| `visits` | Записи/визиты | id, org_id, client_id, staff_id, started_at, status |
-| `payments` | Платежи | id, org_id, client_id, amount, status, tranzila_document_id |
-| `products` | Товары/материалы | id, org_id, name, price, stock_quantity |
-| `inventory_transactions` | Движение склада | id, org_id, product_id, type, quantity |
-| `sales` | Продажи | id, org_id, client_id, total_amount, status |
-| `sale_items` | Позиции продажи | id, sale_id, org_id, product_id, quantity, price |
-| `site_orders` | Заказы с сайта Beautymania | id, org_id, client_id, sale_id, status |
-| `wa_conversations` | WhatsApp чаты | id, org_id, client_id, phone, status |
-| `wa_messages` | Сообщения WA | id, conversation_id, org_id, body, direction |
-| `wa_integrations` | Настройки WA | id, org_id, provider_type, instance_id |
-| `wa_send_log` | Лог отправок WA | id, org_id, client_id, status |
-| `deals` | Сделки (CRM) | id, org_id, client_id, assigned_to, stage_id |
-| `deal_stages` | Этапы воронки | id, org_id, name, position |
-| `work_shifts` | Смены сотрудников | id, org_id, user_id, started_at |
-| `audit_log` | Аудит действий | id, org_id, action, entity_type, entity_id |
-| `staff_permissions` | Права сотрудников | id, org_id, user_id, permissions(jsonb) |
-| `push_subscriptions` | Web push подписки | id, org_id, user_id, subscription(jsonb) |
-| `revenue_logs` | Доходы сотрудников | id, org_id, worker_id, amount |
-| `expenses` | Расходы | id, org_id, amount, category |
-| `impersonation_sessions` | Сессии impersonation | id, admin_id, target_org_id, token |
-| `org_receipt_settings` | Настройки квитанций | id, org_id, provider, document_type, is_enabled |
+ТаблицаНазначениеКлючевые колонки`organizations`Одна запись = один клиент Trinityid, name, features(jsonb), plan, subscription_status`org_users`Членство пользователей в orguser_id, org_id, role`branches`Филиал → родительская orgid, parent_org_id, child_org_id`user_active_branch`Активная ветка пользователяuser_id, active_org_id`clients`CRM-клиенты бизнесаid, org_id, first_name, last_name, phone, email`visits`Записи/визитыid, org_id, client_id, staff_id, started_at, status`payments`Платежиid, org_id, client_id, amount, status, tranzila_document_id`products`Товары/материалыid, org_id, name, price, stock_quantity`inventory_transactions`Движение складаid, org_id, product_id, type, quantity`sales`Продажиid, org_id, client_id, total_amount, status`sale_items`Позиции продажиid, sale_id, org_id, product_id, quantity, price`site_orders`Заказы с сайта Beautymaniaid, org_id, client_id, sale_id, status`wa_conversations`WhatsApp чатыid, org_id, client_id, phone, status`wa_messages`Сообщения WAid, conversation_id, org_id, body, direction`wa_integrations`Настройки WAid, org_id, provider_type, instance_id`wa_send_log`Лог отправок WAid, org_id, client_id, status`deals`Сделки (CRM)id, org_id, client_id, assigned_to, stage_id`deal_stages`Этапы воронкиid, org_id, name, position`work_shifts`Смены сотрудниковid, org_id, user_id, started_at`audit_log`Аудит действийid, org_id, action, entity_type, entity_id`staff_permissions`Права сотрудниковid, org_id, user_id, permissions(jsonb)`push_subscriptions`Web push подпискиid, org_id, user_id, subscription(jsonb)`revenue_logs`Доходы сотрудниковid, org_id, worker_id, amount`expenses`Расходыid, org_id, amount, category`impersonation_sessions`Сессии impersonationid, admin_id, target_org_id, token`org_receipt_settings`Настройки квитанцийid, org_id, provider, document_type, is_enabled
 
 ### FK-индексы (добавлены 01.04.2026)
+
 После аудита Supabase advisories добавлены 15 недостающих индексов на FK-колонки:
+
 - `client_photos(visit_id)`, `deals(org_id, stage_id)`
 - `outbound_queue(org_id, client_id)`, `product_relations(org_id, product_id, related_id)`
 - `sale_items(product_id)`, `sales(payment_id)`
@@ -209,6 +167,7 @@ src/
 ### RLS initplan оптимизация (01.04.2026)
 
 Во всех RLS-политиках (34 политики на 30+ таблицах) заменены вызовы:
+
 - `auth.uid()` → `(SELECT auth.uid())`
 - `auth.role()` → `(SELECT auth.role())`
 
@@ -233,15 +192,17 @@ USING (org_id IN (
 ```
 
 ### Таблицы с `service_role_only`
+
 - `payment_attempts` — только сервер
 - `impersonation_sessions` — только сервер
 
 ### Multiple permissive policies (исправлено 01.04.2026)
 
 Устранены overlapping политики на таблицах:
-- **`staff_permissions`**: удалены дубли `staff_view_own_permissions`, `owner_manages_permissions`
-- **`inventory_transactions`**: удалены старые `inventory_select`, `inventory_insert` (через `get_user_org_ids()`)
-- **`branches`, `deal_stages`, `deal_tags`, `product_relations`, `sales_plans`**: ALL-политики разбиты на INSERT/UPDATE/DELETE чтобы не перекрываться с SELECT
+
+- `staff_permissions`: удалены дубли `staff_view_own_permissions`, `owner_manages_permissions`
+- `inventory_transactions`: удалены старые `inventory_select`, `inventory_insert` (через `get_user_org_ids()`)
+- `branches`**,** `deal_stages`**,** `deal_tags`**,** `product_relations`**,** `sales_plans`: ALL-политики разбиты на INSERT/UPDATE/DELETE чтобы не перекрываться с SELECT
 
 ### Удалённые дублирующие индексы (01.04.2026)
 
@@ -273,20 +234,11 @@ const auth = await getAuthContext()
 
 ### Клиенты Supabase
 
-| Файл | Использование |
-|---|---|
-| `src/lib/supabase/server.ts` | Cookie-based client (для обычных запросов с RLS) |
-| `src/lib/supabase-service.ts` | Service role (обходит RLS, только после проверки auth) |
+ФайлИспользование`src/lib/supabase/server.ts`Cookie-based client (для обычных запросов с RLS)`src/lib/supabase-service.ts`Service role (обходит RLS, только после проверки auth)
 
 ### Роли пользователей
 
-| Роль | Доступ |
-|---|---|
-| `owner` | Полный доступ к org, управление настройками, staff |
-| `admin` | Управление клиентами, платежами, данными |
-| `staff` | Ограниченный доступ через `staff_permissions` |
-| `worker` | Изолированный раздел `/worker` — только свои данные |
-| superadmin | Через `admin_users` таблицу — полный доступ ко всем org |
+РольДоступ`owner`Полный доступ к org, управление настройками, staff`admin`Управление клиентами, платежами, данными`staff`Ограниченный доступ через `staff_permissionsworker`Изолированный раздел `/worker` — только свои данныеsuperadminЧерез `admin_users` таблицу — полный доступ ко всем org
 
 ### Impersonation (суперадмин)
 
@@ -296,6 +248,7 @@ admin_users.is_admin = true → может работать от имени лю
 ```
 
 ### Worker раздел (изолированный)
+
 - Route group: `src/app/(worker)/`
 - Layout: JWT-only, без RLS
 - Хук: `useIsAdminFast` — проверка JWT без сетевого запроса
@@ -313,22 +266,11 @@ organizations (parent)
             └── organizations (child — отдельный org_id)
 ```
 
-| Компонент | Назначение |
-|---|---|
-| `branches` таблица | Связь parent_org_id → child_org_id |
-| `user_active_branch` | Активная ветка пользователя (server truth) |
-| `BranchContext.tsx` | Client-side кэш в localStorage |
-| `POST /api/set-active-branch` | Сохранение выбора в БД |
+КомпонентНазначение`branches` таблицаСвязь parent_org_id → child_org_id`user_active_branch`Активная ветка пользователя (server truth)`BranchContext.tsx`Client-side кэш в localStorage`POST /api/set-active-branch`Сохранение выбора в БД
 
 ### Данные по контексту
 
-| Тип данных | Скоп | Механизм |
-|---|---|---|
-| Clients | Shared (mainOrgId) | Без branch-контекста |
-| Visits | Per activeOrgId | Service role + user_active_branch |
-| Payments | Per activeOrgId | Service role + user_active_branch |
-| Products | Per activeOrgId | Service role + user_active_branch |
-| Dashboard | Per activeOrgId | useBranch() hook |
+Тип данныхСкопМеханизмClientsShared (mainOrgId)Без branch-контекстаVisitsPer activeOrgIdService role + user_active_branchPaymentsPer activeOrgIdService role + user_active_branchProductsPer activeOrgIdService role + user_active_branchDashboardPer activeOrgIduseBranch() hook
 
 ---
 
@@ -336,69 +278,65 @@ organizations (parent)
 
 ### Tranzila — библиотеки
 
-| Файл | Назначение |
-|---|---|
-| `src/lib/tranzila.ts` | Создание платёжных ссылок (DirectNG iframe) |
-| `src/lib/tranzila-invoices.ts` | Генерация документов (Invoices API) |
-| `src/lib/tranzila-webhook.ts` | Безопасность вебхуков (подпись, IP) |
+ФайлНазначение`src/lib/tranzila.ts`Создание платёжных ссылок (DirectNG iframe)`src/lib/tranzila-invoices.ts`Генерация документов (Invoices API)`src/lib/tranzila-webhook.ts`Безопасность вебхуков (подпись, IP)
 
 ### Типы документов Tranzila
 
-| Код API | Тип в коде | Иврит |
-|---|---|---|
-| `IR` | `receipt_invoice` | חשבונית מס קבלה (default) |
-| `RE` | `receipt` | קבלה |
-| `IN` | `invoice` | חשבונית מס |
+Код APIТип в кодеИврит`IRreceipt_invoice`חשבונית מס קבלה (default)`REreceipt`קבלה`INinvoice`חשבונית מס
 
 **Default везде**: `receipt_invoice` (חשבונית מס קבלה). Меняется через `org_receipt_settings.document_type`.
 
 ### Терминалы
 
-| Переменная | Назначение |
-|---|---|
-| `TRANZILA_TERMINAL_ID` | Основной платёжный терминал (`ambersolt`) |
-| `TRANZILA_TOKEN_TERMINAL` | Token-терминал для рекуррентных платежей |
-| `tranzila_invoice_terminal` | Отдельный терминал для документов (на уровне org) |
+ПеременнаяНазначение`TRANZILA_TERMINAL_ID`Основной платёжный терминал (`ambersolt`)`TRANZILA_TOKEN_TERMINAL`Token-терминал для рекуррентных платежей`tranzila_invoice_terminal`Отдельный терминал для документов (на уровне org)
 
 **Приоритет терминала для документов**: `org.tranzila_invoice_terminal` → `org.tranzila_terminal` → `env.TRANZILA_TERMINAL_ID`
 
 ### Точки генерации документов
 
 #### 1. `/api/payments/[id]/send-receipt` — ручная отправка
+
 - **Триггер**: кнопка "Отправить квитанцию" в PaymentDetailsDrawer
 - **Функции**: `createReceipt()` → `getReceiptPdf()`
 - **Канал**: WhatsApp (Meta Cloud API) + email
 - **Идемпотентность**: проверяет `payment.tranzila_document_id`
 
 #### 2. `/api/payments/[id]/auto-send-receipt` — автоматическая (cron)
+
 - **Триггер**: автоматически после оплаты (Bearer CRON_SECRET)
 - **Поддерживает**: Tranzila и Morning (Green Invoice)
 - **Канал**: WhatsApp (Whapi)
 
 #### 3. `/api/payments/tranzila-notify` — рекуррентные платежи
+
 - **Триггер**: callback от Tranzila My Billing (ежемесячное списание)
 - **Тип документа**: жёстко `receipt_invoice`
 - **Назначение**: подписки клиентов Trinity
 
 #### 4. `/api/payments/tranzila-success` (функция `sendSubscriptionEmail`)
+
 - **Триггер**: redirect после успешной оплаты через iframe
 - **Назначение**: онбординг нового клиента Trinity
 - **Функция**: `createTranzilaInvoice()` (deprecated → `createReceipt()`)
 
 #### 5. `/api/payments/tranzila/webhook` — старый webhook
+
 - **Триггер**: POST от Tranzila (form-urlencoded)
 - **Безопасность**: IP whitelist (62.219.85.140/141/148), идемпотентность
 - **Функция**: `createTranzilaInvoice()` (deprecated)
 
 #### 6. `/api/payments/[id]/tranzila-pdf` — скачивание PDF
+
 - **Триггер**: кнопка "Скачать PDF" в PaymentDetailsDrawer
 - **Функция**: только `getReceiptPdf()`, документ не создаётся
 
 #### 7. `/api/payments/[id]/receipt` — локальная HTML-квитанция
+
 - **Независимая система**, не использует Tranzila Invoices API
 - **Функция**: `generateReceipt()` из `src/lib/generate-receipt.ts`
 
 ### ⚠️ Важные замечания
+
 1. `createTranzilaInvoice()` помечена `@deprecated`. Два места ещё используют её: `tranzila/webhook` и `tranzila-success`. Нужно мигрировать на `createReceipt()`.
 2. В `/api/payments/tranzila-notify` терминал не передаётся — используется глобальный `TRANZILA_TERMINAL_ID`. Gap если у клиента отдельный `tranzila_invoice_terminal`.
 3. Morning (Green Invoice) подключён в `auto-send-receipt` как альтернатива (тип 400 = קבלה).
@@ -418,6 +356,7 @@ Whapi.cloud → POST /api/webhooks/whapi
 ```
 
 ### Таблицы
+
 - `wa_conversations` — один чат = одна запись
 - `wa_messages` — сообщения (direction: `in` / `out`)
 - `wa_integrations` — настройки интеграции (vault_secret_id для API key)
@@ -426,6 +365,7 @@ Whapi.cloud → POST /api/webhooks/whapi
 - `outbound_queue` — очередь исходящих
 
 ### Ключевые особенности
+
 - **Realtime sync**: Supabase Realtime + polling fallback (5 сек)
 - **Оптимистичные обновления**: сообщение появляется сразу, до подтверждения
 - **Звуковые уведомления**: `public/sounds/notification.wav`
@@ -434,16 +374,11 @@ Whapi.cloud → POST /api/webhooks/whapi
 - **Два направления**: входящие (webhook) + исходящие (API)
 
 ### API маршруты
-| Маршрут | Назначение |
-|---|---|
-| `GET /api/wa-inbox/conversations` | Список чатов |
-| `POST /api/wa-inbox/send` | Отправить сообщение |
-| `GET /api/wa-inbox/[id]` | Сообщения чата |
-| `POST /api/wa-inbox/[id]/create-client` | Создать клиента из чата |
-| `POST /api/wa-inbox/[id]/create-visit` | Создать визит из чата |
-| `POST /api/webhooks/whapi` | Входящие сообщения от Whapi |
+
+МаршрутНазначение`GET /api/wa-inbox/conversations`Список чатов`POST /api/wa-inbox/send`Отправить сообщение`GET /api/wa-inbox/[id]`Сообщения чата`POST /api/wa-inbox/[id]/create-client`Создать клиента из чата`POST /api/wa-inbox/[id]/create-visit`Создать визит из чата`POST /api/webhooks/whapi`Входящие сообщения от Whapi
 
 ### WA-напоминания о визитах
+
 - Cron: `GET /api/cron/reminders`
 - Шаблоны: `wa_trigger_settings` (время, текст)
 - Отправка через Whapi API
@@ -453,15 +388,18 @@ Whapi.cloud → POST /api/webhooks/whapi
 ## 10. Лендинг /landing
 
 ### Расположение
-- `src/app/landing/page.tsx` — единый client-component (`'use client'`), ~1700 строк
+
+- `src/app/landing/page.tsx` — единый client-component (`'use client'`), \~1700 строк
 - `src/app/landing/layout.tsx` — пустой pass-through (изоляция через root layout + cookie)
 - `src/app/landing/metadata.ts` — SEO metadata
 - `src/app/page.tsx` — `redirect('/landing')` (корень → лендинг)
 
 ### Изоляция от Trinity app
+
 Лендинг рендерится в ОТДЕЛЬНОМ `<html>/<body>` без Trinity-провайдеров.
 
 **Механизм:**
+
 1. `middleware.ts` на публичных путях выставляет cookie `trinity_page=landing` (maxAge 60s) только для `/landing*`, для остальных публичных путей — удаляет
 2. Root `src/app/layout.tsx` читает cookie в SSR — если `trinity_page === 'landing'`:
    - `<html lang="ru" dir="ltr">` (всегда LTR, без Hebrew)
@@ -473,9 +411,11 @@ Whapi.cloud → POST /api/webhooks/whapi
 **Зачем:** болванка требует `body { overflow: hidden }` + fixed sidebar + scroll-snap. Если бы лендинг рендерился под общим layout с Trinity-провайдерами и её `globals.css`, глобальные стили конфликтовали бы с лендингом (особенно Rubik vs Inter, RTL vs LTR, Tailwind reset vs собственный reset).
 
 ### Архитектура страницы
+
 Единый client-компонент, все стили inline через `<style>{`...`}</style>` (template literal внутри JSX). Это позволяет держать весь лендинг в одном файле и избегать конфликтов с Trinity CSS.
 
 `useEffect` инициализирует 3 `IntersectionObserver`:
+
 - **Fade-up reveals** — `.reveal` получает `.visible` при появлении в viewport
 - **Active section** — синхронизирует `.active` класс sidebar/mobile-tabs со scroll-позицией
 - **Smooth scroll** — перехватывает клики по `a[href^="#"]`, делает `scrollIntoView({ behavior: 'smooth' })`
@@ -483,40 +423,46 @@ Whapi.cloud → POST /api/webhooks/whapi
 Scroll-контейнер — `<main id="main-scroll">` с `scroll-snap-type: y mandatory`. Все `IntersectionObserver` используют этот элемент как `root`.
 
 ### Компоненты страницы
-1. **Sidebar** (fixed, left, 80px → expands to 240px on hover) — логотип, 7 пунктов навигации, «Войти →», переключатель языка
-2. **Mobile bottom tabs** (fixed, bottom, только `<768px`) — 5 табов: Главная, Возможности, Тарифы, Отзывы, Контакты
-3. **Hero** — eyebrow, H1 с gradient-text, subtitle, 2 CTA-кнопки, 3 stats (90% WhatsApp / 5 мин / 0₪), particles + mesh-gradient bg, scroll-chevron
-4. **Industries strip** — marquee с 8 типами бизнеса (×2 для seamless loop)
-5. **Pain points** — 3 карточки с красной полосой слева (записи теряются / SMS не читают / непонятно что работает)
-6. **Bento features** — 6 карточек в grid-template-areas:
-   - WhatsApp (full row, с mini-chat mockup из 3 bubbles)
-   - Clients / Diary
-   - Analytics (full row, с mini-chart из 10 bars)
-   - Stock / Payments
-7. **How it works** — 4 шага с circular gradient-connector
-8. **Security** — 4 карточки 2×2 с зелёной полосой слева
-9. **Pricing** — 4 плана (Base ₪199 / Pro ₪249 featured / Enterprise ₪499 / Индивидуальная) в horizontal scroll-snap
+
+ 1. **Sidebar** (fixed, left, 80px → expands to 240px on hover) — логотип, 7 пунктов навигации, «Войти →», переключатель языка
+ 2. **Mobile bottom tabs** (fixed, bottom, только `<768px`) — 5 табов: Главная, Возможности, Тарифы, Отзывы, Контакты
+ 3. **Hero** — eyebrow, H1 с gradient-text, subtitle, 2 CTA-кнопки, 3 stats (90% WhatsApp / 5 мин / 0₪), particles + mesh-gradient bg, scroll-chevron
+ 4. **Industries strip** — marquee с 8 типами бизнеса (×2 для seamless loop)
+ 5. **Pain points** — 3 карточки с красной полосой слева (записи теряются / SMS не читают / непонятно что работает)
+ 6. **Bento features** — 6 карточек в grid-template-areas:
+    - WhatsApp (full row, с mini-chat mockup из 3 bubbles)
+    - Clients / Diary
+    - Analytics (full row, с mini-chart из 10 bars)
+    - Stock / Payments
+ 7. **How it works** — 4 шага с circular gradient-connector
+ 8. **Security** — 4 карточки 2×2 с зелёной полосой слева
+ 9. **Pricing** — 4 плана (Base ₪199 / Pro ₪249 featured / Enterprise ₪499 / Индивидуальная) в horizontal scroll-snap
 10. **Reviews** — 2 карточки: Анета (Beautymania), Ксения (Hair Rehab)
 11. **CTA + Contacts** — финальный призыв + форма (имя/email/тел/сообщение) + контакты (WhatsApp/Email/Израиль)
 12. **Footer** — copyright + ссылки
 
 ### Правила hover sidebar (важно!)
+
 Чтобы иконки НЕ смещались при expand sidebar:
+
 - `.sidebar-logo`, `.sidebar-nav a`, `.sidebar-bottom` имеют фиксированную `width: var(--sidebar-expanded)` (240px)
 - Ширина видимой части sidebar меняется через `width` на `.sidebar` (80 → 240px) + `overflow: hidden`
 - Layout внутренних элементов считается от 240px всегда → при expand ничего не пересчитывается, просто «открывается окно»
 
 ### Шрифты
+
 - **Единственный шрифт:** Inter (weights 300, 400, 500, 600, 700) с Google Fonts
 - Подключается в `src/app/layout.tsx` только при `trinity_page=landing`
 - `html`, `body`, `.sidebar` явно прописывают `font-family: 'Inter', sans-serif` чтобы не сработал fallback на Trinity-шрифты
 
 ### Адаптивность
+
 - `>1024px` — sidebar 80px, expand до 240px при hover
 - `768–1024px` — sidebar 60px, без hover, текст скрыт через `display: none`, bento становится 2-column
 - `<768px` — sidebar скрыт, показывается mobile bottom tabs, scroll-snap отключён, все grid становятся 1-column, steps-container — вертикальный с линией слева
 
 ### CSS-переменные
+
 ```css
 --bg: #080810           /* тёмный фон */
 --surface: #111118      /* карточки */
@@ -531,6 +477,7 @@ Scroll-контейнер — `<main id="main-scroll">` с `scroll-snap-type: y 
 ```
 
 ### История изменений (18.04.2026)
+
 - **c632de0** — полная перезапись `page.tsx` с нуля 1-в-1 по эталонной HTML-болванке (`trinity-variant-a.html`, 1714 строк). Заменены все тексты, добавлены mini-chat/mini-chart mockups, форма контактов, fixed sidebar со scroll-snap секциями
 - **d9a9fe5** — фикс смещения иконок sidebar при hover: `.sidebar-logo`, `.sidebar-nav a`, `.sidebar-bottom` получили `width: var(--sidebar-expanded)`. Принудительный `font-family: 'Inter'` на `body` и `.sidebar`
 - **39d921e** — force-dynamic в `layout.tsx` для обхода edge-cache (prerender жил 15 дней игнорируя деплои)
@@ -543,11 +490,13 @@ Scroll-контейнер — `<main id="main-scroll">` с `scroll-snap-type: y 
 ## 11. UI-компоненты
 
 ### GoldTabBar — мобильная навигация
+
 `src/components/layout/GoldTabBar.tsx`
 
-Liquid gold bottom tab bar для мобильных устройств (<1024px). Рендерится через `DashboardShell` поверх всего контента.
+Liquid gold bottom tab bar для мобильных устройств (&lt;1024px). Рендерится через `DashboardShell` поверх всего контента.
 
 **Характеристики:**
+
 - Squircle-индикатор активного таба с золотой градиентной рамкой (9-стоп градиент, `#fffbe0` → `#3a1e00` → `#fffbe0`)
 - Внешнее свечение через `box-shadow` amber-glow
 - Shimmer-анимация внутри пилюли через `@keyframes goldShimmer`
@@ -561,16 +510,17 @@ Liquid gold bottom tab bar для мобильных устройств (<1024px
 
 **Интеграция:** Подключён в `DashboardShell.tsx` рядом с `PinnedModalsTray`.
 
-
-
 ### Modal.tsx — базовый движок
+
 `src/components/ui/Modal.tsx`
+
 - Перетаскиваемый + закрепляемый
 - Поддержка RTL/LTR
 - Размеры: sm/md/lg/xl/full через `clamp()`
 - **Не импортировать напрямую** в компонентах фич — использовать через TrinityModalShell или WizardModal
 
 ### TrinityModalShell — стандарт для обычных модалок
+
 `src/components/ui/TrinityModalShell.tsx`
 
 ```tsx
@@ -582,6 +532,7 @@ Liquid gold bottom tab bar для мобильных устройств (<1024px
 ```
 
 ### WizardModal — многошаговые диалоги
+
 `src/components/ui/WizardModal.tsx`
 
 **Всегда используй для любого многошагового диалога.**
@@ -602,23 +553,20 @@ Liquid gold bottom tab bar для мобильных устройств (<1024px
 Визуальный стиль: тёмно-синий градиент хедер, hex-логотип, шаговые индикаторы.
 
 ### ModalBottomSheet — мобильный паттерн
-Для мобильных устройств (<768px) — bottom sheet вместо центрированного модала.
+
+Для мобильных устройств (&lt;768px) — bottom sheet вместо центрированного модала.
 
 ### Размеры модалок
 
-| size | max-width |
-|---|---|
-| sm | clamp(320px, 90vw, 384px) |
-| md | clamp(320px, 90vw, 448px) |
-| lg | clamp(320px, 85vw, 512px) |
-| xl | clamp(320px, 85vw, 576px) |
-| full | clamp(320px, 80vw, 896px) |
+sizemax-widthsmclamp(320px, 90vw, 384px)mdclamp(320px, 90vw, 448px)lgclamp(320px, 85vw, 512px)xlclamp(320px, 85vw, 576px)fullclamp(320px, 80vw, 896px)
 
 ### Адаптивность (правило)
+
 **Все страницы Trinity обязаны поддерживать:**
-- Mobile: < 768px
+
+- Mobile: &lt; 768px
 - Tablet: 768–1024px
-- Desktop: > 1024px
+- Desktop: &gt; 1024px
 
 ---
 
@@ -635,6 +583,7 @@ Liquid gold bottom tab bar для мобильных устройств (<1024px
 - **Seed-данные**: автоматически генерируются тестовые записи
 
 ### Защита лимитов
+
 ```typescript
 // Типизированный error class
 class LimitExceededError extends Error { ... }
@@ -644,6 +593,7 @@ class LimitExceededError extends Error { ... }
 ```
 
 ### Снятие лимитов
+
 При успешном платеже через Tranzila webhook — `is_demo: false`, все лимиты → `null`.
 
 ---
@@ -651,21 +601,19 @@ class LimitExceededError extends Error { ... }
 ## 13. Beautymania интеграция
 
 ### Сайт
+
 - **Репозиторий**: `Creepie132/bm-site`
 - **Локальный путь**: `F:\Amber_solutions_Kira\bm_site`
 - **Stack**: HTML/CSS/JS (статический)
 - **Дизайн**: чёрный + золото
-- **URL**: beautymania.co.il
+- **URL**: [beautymania.co.il](http://beautymania.co.il)
 
 ### API маршруты (в Trinity)
-| Маршрут | Назначение |
-|---|---|
-| `GET /api/beautymania/products` | Каталог товаров для сайта |
-| `GET /api/beautymania/related` | Связанные товары |
-| `POST /api/beautymania/order` | Создание заказа → Trinity CRM |
-| `POST /api/beautymania/contact` | Форма обратной связи |
+
+МаршрутНазначение`GET /api/beautymania/products`Каталог товаров для сайта`GET /api/beautymania/related`Связанные товары`POST /api/beautymania/order`Создание заказа → Trinity CRM`POST /api/beautymania/contact`Форма обратной связи
 
 ### Цикл заказа
+
 ```
 Клиент на beautymania.co.il → POST /api/beautymania/order
   → создаётся site_orders запись
@@ -675,6 +623,7 @@ class LimitExceededError extends Error { ... }
 ```
 
 ### Уведомления о заказах (02.04.2026)
+
 - **WA-алерт**: настраивается в Trinity → Настройки → Уведомления
   - `organizations.notify_new_orders_wa` (boolean)
   - `organizations.notification_phone` (номер получателя)
@@ -682,6 +631,7 @@ class LimitExceededError extends Error { ... }
 - **Провайдер**: `SiteOrdersRealtimeProvider.tsx` в DashboardShell
 
 ### Статусы заказов
+
 `new` → `confirmed` → `shipped` → `delivered` | `cancelled`
 
 При каждой смене статуса → WA клиенту (4 шаблона).
@@ -691,12 +641,14 @@ class LimitExceededError extends Error { ... }
 ## 14. Kira AI агент
 
 ### Концепция
+
 - **Что**: AI-ассистент для клиентов Trinity (в приложении + WhatsApp бот)
 - **LLM**: OpenAI GPT-4o (не Claude — бан Anthropic из-за OpenClaw)
 - **OCR**: Gemini уже используется
-- **Домен**: kira.ambersol.co.il (планируется)
+- **Домен**: [kira.ambersol.co.il](http://kira.ambersol.co.il) (планируется)
 
 ### Архитектура (планируется)
+
 ```
 WhatsApp (Whapi) → incoming webhook
   → Trinity backend → OpenAI GPT-4o
@@ -704,6 +656,7 @@ WhatsApp (Whapi) → incoming webhook
 ```
 
 ### Требования к ToS
+
 - Бот должен представляться как AI: "Я Кира, AI-ассистент Trinity"
 - Нельзя общаться с людьми без раскрытия что это AI
 - Причина бана OpenClaw: бот говорил с Анетой без уведомления
@@ -715,20 +668,24 @@ WhatsApp (Whapi) → incoming webhook
 ### Engineering Protocol (ОБЯЗАТЕЛЕН)
 
 **Фаза 1 — Сканирование (Zero-Assumption)**
+
 - Перед любым кодом — читать реальные файлы
 - Не дублировать существующий функционал
 
 **Фаза 2 — Проектирование**
+
 - Валидация входящих данных
 - Обработка ошибок
 - Оценка регрессии
 
 **Фаза 3 — Валидация**
+
 - Ошибка устранена?
 - TypeScript/БД/UI целы?
 - Нет костылей?
 
 **Фаза 4 — Отчёт**
+
 ```
 Проверено: [файлы/модули]
 Регрессия: [нет/описание]
@@ -736,6 +693,7 @@ WhatsApp (Whapi) → incoming webhook
 ```
 
 ### Правила кода
+
 ```
 ЗАПРЕЩЕНО:
 - monkey-patching глобалов
@@ -749,6 +707,7 @@ WhatsApp (Whapi) → incoming webhook
 ```
 
 ### Commit формат
+
 ```
 feat: новая функция
 fix: исправление бага
@@ -757,18 +716,21 @@ chore: конфиг, зависимости
 ```
 
 ### Правила UI
+
 - TrinityModalShell — стандарт для всех модалок (кроме явно кастомных)
 - При изменении UI — только добавление/исправление, никогда не удалять элементы без явной просьбы
 
 ### Checklist перед каждым API route
-- [ ] `getAuthContext()` вызван первым
-- [ ] Пользователь аутентифицирован (401 если нет)
-- [ ] `activeOrgId` из БД, не из заголовков
-- [ ] Все запросы фильтруются по `org_id`
-- [ ] Service role только после проверки auth
-- [ ] Нет sensitive данных в логах
+
+- \[ \] `getAuthContext()` вызван первым
+- \[ \] Пользователь аутентифицирован (401 если нет)
+- \[ \] `activeOrgId` из БД, не из заголовков
+- \[ \] Все запросы фильтруются по `org_id`
+- \[ \] Service role только после проверки auth
+- \[ \] Нет sensitive данных в логах
 
 ### Checklist перед деплоем
+
 ```
 1. npm run build  — должен быть ЧИСТЫМ (0 ошибок, 0 warnings TypeScript)
 2. Перечитать изменённый файл — проверить корректность кода
@@ -787,12 +749,17 @@ chore: конфиг, зависимости
 **Что:** При создании визита (web + PWA) нажатие на «+ Добавить позицию» открывало шит `ItemPickerSheet`, но кнопки «Услуга», «Товар», «Произвольно» выглядели мёртвыми — клик не открывал следующий шаг. Баг регрессии: сломано мульти-корзинное добавление услуг/товаров в визит.
 
 **Корень проблемы:**
+
 - В `src/components/shared/ItemPickerSheet.tsx` дефолт параметра объявлен как inline-литерал:
+
   ```tsx
   allowedTypes = ['service', 'product', 'custom']
   ```
+
   Этот массив пересоздаётся на каждом рендере родителя (`UnifiedVisitDialog`) — новая ссылка.
+
 - Эффект синхронизации шага держал `allowedTypes` в зависимостях:
+
   ```tsx
   useEffect(() => {
     if (isOpen) {
@@ -802,24 +769,30 @@ chore: конфиг, зависимости
     }
   }, [isOpen, allowedTypes])
   ```
+
 - Итог: пользователь нажимал «Услуга» → `setStep('service')` → любой следующий ререндер `UnifiedVisitDialog` (а их каскад при изменении state корзины/поиска/клиента) → новая ссылка `allowedTypes` → эффект срабатывал → `setStep('choose')` откатывал step обратно. Визуально — кнопка «не реагирует».
 
-**Почему не проявлялся в `UnifiedSalesDialog`:** там `ItemPickerSheet` — локальная одноимённая функция внутри файла, не импорт из `shared/`. Баг был только в визитах.
+**Почему не проявлялся в** `UnifiedSalesDialog`**:** там `ItemPickerSheet` — локальная одноимённая функция внутри файла, не импорт из `shared/`. Баг был только в визитах.
 
 **Фикс:**
+
 1. Вынесен стабильный дефолт в модульную константу `DEFAULT_ALLOWED_TYPES`:
+
    ```tsx
    const DEFAULT_ALLOWED_TYPES: Array<'service' | 'product' | 'custom'> = [
      'service', 'product', 'custom',
    ]
    ```
+
 2. Эффект теперь зависит от стабильного primitive-ключа `allowedKey = allowedTypes.join(',')` — двойная защита от будущих вызовов с inline-литералами:
+
    ```tsx
    const allowedKey = allowedTypes.join(',')
    useEffect(() => { ... }, [isOpen, allowedKey])
    ```
 
 **Затронутые файлы:**
+
 - `src/components/shared/ItemPickerSheet.tsx` (props-default + useEffect deps)
 
 **Регрессия:** проверено все использование — `ItemPickerSheet` из `shared/` импортируется только в `UnifiedVisitDialog.tsx`. Single-type кейсы (`allowedTypes.length === 1`) продолжают работать.
@@ -835,25 +808,32 @@ chore: конфиг, зависимости
 **Что:** В `SaleDetailModal` (детали сделки на /sales) для sale со «Ссылка на оплату» (`payment_method=null`, `status=unpaid`, связанный `payment.payment_link` не пуст) в поле «Оплата» показывалось **«Наличные»** — это финансовая ложь и риск путаницы в учёте. А также не было кнопок для копирования/открытия/отправки ссылки клиенту.
 
 **Корень проблемы:**
+
 - Архитектура Trinity (по дизайну): sale создаётся чистой (`payment_method=null`, `status=unpaid`, `paid_amount=0`). `payment_method` заполняется только когда реально прошла оплата — это правильно для учёта.
+
 - Но UI в `SaleDetailModal.tsx:114` ложно дефолтил на «Наличные»:
+
   ```ts
   const methodLabel = t[sale.payment_method as keyof typeof t] || sale.payment_method || t.cash
   ```
+
   Для `payment_method=null`: `t[null] → undefined || null || t.cash` → **«Наличные»**.
+
 - Данные о pending-ссылке уже были доступны — API `/api/sales` джойнил `payments!payments_sale_id_fkey(payment_link)`, но UI их игнорировал.
 
 **Фикс:**
 
-1. **Новый shared-компонент `src/components/payments/PaymentLinkActions.tsx`** (149 строк). Экспортирует:
+1. **Новый shared-компонент** `src/components/payments/PaymentLinkActions.tsx` (149 строк). Экспортирует:
+
    - `<PaymentLinkActions />` — три кнопки (copy/open/send WA) для тёмного sidebar
    - `buildPaymentLinkMobileActions(...)` — массив actions для `TrinityMobDetailShell`
-   - Clipboard API с fallback на `execCommand`, wa.me deep-link с нормализацией телефона в `972xxx`, встроенная локаль HE+RU
+   - Clipboard API с fallback на `execCommand`, [wa.me](http://wa.me) deep-link с нормализацией телефона в `972xxx`, встроенная локаль HE+RU
    - Иконки: `Copy`, `ExternalLink`, `MessageCircle`
 
-2. **Рефакторинг `PaymentDetailsDrawer.tsx`:** удалил 46 строк inline-логики + 10 строк локалей — заменил на вызовы shared-компонента. Поведение 1:1 с предыдущим коммитом `294b25c`.
+2. **Рефакторинг** `PaymentDetailsDrawer.tsx`**:** удалил 46 строк inline-логики + 10 строк локалей — заменил на вызовы shared-компонента. Поведение 1:1 с предыдущим коммитом `294b25c`.
 
-3. **`SaleDetailModal.tsx` — главный фикс:**
+3. `SaleDetailModal.tsx` **— главный фикс:**
+
    - Добавлена детекция: `pendingLink = sale.payments?.find(p => p.payment_link && p.status === 'pending')?.payment_link`
    - `isAwaitingLink = (status === 'unpaid' || status === 'new') && !!pendingLink`
    - Переписана логика `methodLabel` / `methodIcon` — больше **нет лжи про «Наличные»**:
@@ -864,13 +844,14 @@ chore: конфиг, зависимости
    - Встроен `<PaymentLinkActions />` в desktop sidebar (когда `isAwaitingLink`)
    - Встроен `buildPaymentLinkMobileActions(...)` в mobile actions (в начало массива)
 
-4. **`api/sales/route.ts`:** джойн расширен — `payments!payments_sale_id_fkey(payment_link, status)`. Нужен `status` чтобы отличать pending-ссылку от completed-платежа (completed-оплата через Tranzila тоже хранит link, но его показывать уже не нужно).
+4. `api/sales/route.ts`**:** джойн расширен — `payments!payments_sale_id_fkey(payment_link, status)`. Нужен `status` чтобы отличать pending-ссылку от completed-платежа (completed-оплата через Tranzila тоже хранит link, но его показывать уже не нужно).
 
-5. **`hooks/useSales.ts`:** тип `Sale` пополнен полем `payments?: Array<{ payment_link?: string | null; status?: string | null }>` — соответствует расширенному джойну.
+5. `hooks/useSales.ts`**:** тип `Sale` пополнен полем `payments?: Array<{ payment_link?: string | null; status?: string | null }>` — соответствует расширенному джойну.
 
-**Почему выбран рефакторинг в shared, а не inline-копия:** Inline-копия логики из `PaymentDetailsDrawer` в `SaleDetailModal` означала бы ~50 строк дубликата (3 хендлера × 2 файла). При следующем изменении (новый метод, изменение текста, другая обработка ошибок) пришлось бы править оба места — типичный источник расхождений. Shared-компонент + `buildPaymentLinkMobileActions` даёт единую точку правды для 2+ мест использования.
+**Почему выбран рефакторинг в shared, а не inline-копия:** Inline-копия логики из `PaymentDetailsDrawer` в `SaleDetailModal` означала бы \~50 строк дубликата (3 хендлера × 2 файла). При следующем изменении (новый метод, изменение текста, другая обработка ошибок) пришлось бы править оба места — типичный источник расхождений. Shared-компонент + `buildPaymentLinkMobileActions` даёт единую точку правды для 2+ мест использования.
 
 **Файлы:**
+
 - `src/components/payments/PaymentLinkActions.tsx` — новый (149 строк)
 - `src/components/payments/PaymentDetailsDrawer.tsx` — рефакторинг (−56 строк)
 - `src/components/sales/SaleDetailModal.tsx` — фикс + интеграция shared
@@ -880,21 +861,23 @@ chore: конфиг, зависимости
 **Build:** `npm run build` — `✓ Compiled successfully in 27.7s`, 237/237 страниц, 0 TS-ошибок (после исправления generic-типизации `buildHandlers` — сигнатура теперь `LinkMessages` interface вместо `typeof LOCALES['ru']` literal).
 
 **Регрессия:**
+
 - `PaymentDetailsDrawer` — визуально идентичен коммиту `294b25c`. Функциональность `PaymentLinkActions` протестирована через код-пафс и TS.
 - `SaleDetailModal` — старое поведение (эмодзи `💵💳📱🏦` + локаль из `t`) сохраняется для sale с **известным** `payment_method`. Расширение: теперь также корректно показываются неизвестные методы (вместо молчаливого fallback на «Наличные») и `null`-методы (вместо лживого «Наличные»).
 - JOIN `payments.status` — существующие клиенты не затронуты: API возвращает больше данных, старый код их просто игнорирует.
 
 **Безопасность:** защищено. `PaymentLinkActions` — чистый клиентский компонент без API-вызовов (только `navigator.clipboard` и `window.open`). API `/api/sales` — RLS по `org_id`, джойн `payments` имеет FK-constraint `payments_sale_id_fkey`, SELECT-политики на `payments` проверяют `get_user_org_ids()`.
 
-
 **Что:** В `PaymentDetailsDrawer` (детали платежа на страницах /payments, /visits, /debts) для платежа в статусе `pending` с уже созданной Tranzila-ссылкой (`payment_link`) отсутствовали действия: скопировать, открыть, отправить клиенту в WhatsApp. Одновременно кнопка «Отправить квитанцию WA» показывалась для pending — квитанция это документ о **совершённом** платеже, для pending её отправлять нельзя.
 
 **Корень проблемы:**
+
 - В drawer'е не было логики под `payment_link` — только под `transaction_id` (tranzila PDF для completed)
 - Условие показа «Квитанция WA»: `clientPhone && ...` — без фильтра по статусу. Для pending клиенту отправлялась квитанция, которой ещё не существует (API `send-receipt` создаёт документ в Tranzila Invoice — для pending это бессмысленно и потенциально ломает учёт)
 - Готовая логика копирования/открытия/отправки в WA уже существовала в `PaymentLinkResultModal.tsx` (показывается сразу после создания ссылки), но в drawer не переиспользовалась
 
 **Фикс:** `src/components/payments/PaymentDetailsDrawer.tsx`
+
 - Добавлены 3 новых хендлера: `handleCopyLink` (Clipboard API + fallback на `execCommand`), `handleOpenLink` (`window.open`), `handleSendLinkWhatsApp` (`wa.me/972...` deep-link с текстом на языке UI, логика 1:1 из `PaymentLinkResultModal`)
 - Введены `isPendingWithLink = status === 'pending' && !!payment_link` и `isCompletedStatus = status === 'completed' || status === 'paid'`
 - 3 новые кнопки в sidebar (desktop) и 3 новых action в `mobActions` (mobile) — показываются только для `isPendingWithLink`
@@ -902,34 +885,37 @@ chore: конфиг, зависимости
 - Кнопки «PDF» и «Refund» мигрированы с `payment.status === 'completed'` на `isCompletedStatus` (теперь работают и для `paid`, и для `completed` — раньше `paid` игнорировался)
 - Локали пополнены: `copyLink / openLink / sendLinkWa / linkCopied / noLink` (HE + RU)
 
-**Почему не вынес в общий компонент `PaymentLinkActions`:** у `PaymentLinkResultModal` и `PaymentDetailsDrawer` разные визуальные контейнеры (модалка с Tailwind vs sidebar с inline-стилями), кнопки должны выглядеть нативно в каждом. Вынос — отдельный рефакторинг на будущее. Сейчас приоритет — закрыть баг без лишнего скоупа.
+**Почему не вынес в общий компонент** `PaymentLinkActions`**:** у `PaymentLinkResultModal` и `PaymentDetailsDrawer` разные визуальные контейнеры (модалка с Tailwind vs sidebar с inline-стилями), кнопки должны выглядеть нативно в каждом. Вынос — отдельный рефакторинг на будущее. Сейчас приоритет — закрыть баг без лишнего скоупа.
 
 **Файлы:**
+
 - `src/components/payments/PaymentDetailsDrawer.tsx` — +1 import (Copy, ExternalLink), +10 строк локалей, +46 строк хендлеров, +3 мобильных action, +3 desktop-кнопки, гард `isCompletedStatus` на старые кнопки
 
 **Build:** `npm run build` — `✓ Compiled successfully in 25.4s`, 237/237 страниц, 0 TS-ошибок.
 
 **Регрессия:** нулевая для completed-платежей — `isCompletedStatus` охватывает старое `status === 'completed'` и доп. `status === 'paid'` (это расширение, не сужение). API `/api/payments/[id]` и `/api/payments/[id]/send-receipt` не менялись.
 
-**Безопасность:** защищено — `payment_link` читается из уже существующего `richPayment` (SELECT * через `/api/payments/[id]` с `getAuthContext` + `eq('org_id', orgId)`). RLS/auth слой не менялся.
-
+**Безопасность:** защищено — `payment_link` читается из уже существующего `richPayment` (SELECT \* через `/api/payments/[id]` с `getAuthContext` + `eq('org_id', orgId)`). RLS/auth слой не менялся.
 
 **Что:** Кнопка "Добавить услугу" (`Настройки → Бизнес → Услуги → הוסף שירות`) падала с toast-ом "משהו השתבש" ещё до отправки запроса. POST на `/api/services` вообще не уходил — в Vercel runtime logs за 2ч только GET-запросы, ни одного POST.
 
 **Корень проблемы:**
+
 - `useServices()` хранит кэш как плоский массив `Service[]`
 - `useCreateService/useUpdateService/useDeleteService` использовали общий `useOptimisticMutation`, который рассчитан **только** на `PagedCache<T> = { data: T[], count: number }`
 - В `onMutate` хук делал `[...old.data, optimisticRecord]` и `old.count + 1` над плоским массивом → `undefined.data` → crash → `onError` → toast "somethingWentWrong"
 - В jsdoc `useServices.ts` было написано "хук обрабатывает оба шейпа" — это было неверно, `useOptimisticMutation` обрабатывает только paged
 
 **Фикс:** `src/hooks/useServices.ts` переписан — три хука (`useCreateService/useUpdateService/useDeleteService`) теперь используют `useMutation` напрямую с локальной optimistic-логикой для плоского `Service[]`:
+
 - `onMutate`: snapshot через `getQueryData<Service[]>`, optimistic-insert/update/delete через `setQueryData`
 - `onSuccess` (insert): swap temp UUID → server UUID в кэше, debounced invalidate через 2 сек (Realtime-first как в базовом хуке)
 - `onError`: rollback из snapshot
 
-**Почему не правил базовый `useOptimisticMutation`:** его используют `clients / visits / payments / products / sales` — все с `PagedCache`. Расширение базового хука на оба шейпа потребовало бы регрессии 5 модулей. Локальный фикс в `useServices.ts` — нулевая регрессия, точечное решение ровно под плоский кэш.
+**Почему не правил базовый** `useOptimisticMutation`**:** его используют `clients / visits / payments / products / sales` — все с `PagedCache`. Расширение базового хука на оба шейпа потребовало бы регрессии 5 модулей. Локальный фикс в `useServices.ts` — нулевая регрессия, точечное решение ровно под плоский кэш.
 
 **Файлы:**
+
 - `src/hooks/useServices.ts` — полностью переписан (185 строк, 3 хука локально)
 
 **Build:** `npm run build` — `✓ Compiled successfully in 28.0s`, 237/237 страниц, 0 TS-ошибок.
@@ -938,13 +924,13 @@ chore: конфиг, зависимости
 
 **Безопасность:** защищено — API `/api/services` POST не менялся, RLS `services_insert` с `get_user_org_ids()` не менялся.
 
-
 **Что:** При создании нового визита теперь можно добавить несколько позиций: услуги, товары и произвольные (custom) строки — по аналогии с модулем "Продажи". Edit-mode и meeting-mode (встречи) остались как были — одна услуга, без корзины.
 
 **Зачем:** Комплексные визиты одним окном без постфактум-добавления позиций (стрижка + окраска + шампунь товаром). Владу это нужно для Ксении и Анеты, где мастер за один визит продаёт и услугу, и сопутствующий товар.
 
 **Архитектура:**
-- Новый общий компонент `src/components/shared/ItemPickerSheet.tsx` (~330 строк) — bottom-sheet с тремя режимами: `service` / `product` / `custom`. Переиспользуется из `UnifiedSalesDialog` и `UnifiedVisitDialog`. Типизация onAdd через `PickedItem` (открытый контракт), каждый диалог маппит её в свою локальную форму.
+
+- Новый общий компонент `src/components/shared/ItemPickerSheet.tsx` (\~330 строк) — bottom-sheet с тремя режимами: `service` / `product` / `custom`. Переиспользуется из `UnifiedSalesDialog` и `UnifiedVisitDialog`. Типизация onAdd через `PickedItem` (открытый контракт), каждый диалог маппит её в свою локальную форму.
 - В `UnifiedVisitDialog.tsx` добавлена локальная корзина: `items: VisitLineItem[]`, хэндлеры `addItem / removeItem / updateItemQty / updateItemPrice`.
 - Флаг `hasMultiMode = !isEditMode && !isAppt` — корзина работает только для новых визитов-услуг.
 - Авто-расчёт:
@@ -957,11 +943,13 @@ chore: конфиг, зависимости
 - UI: старый блок "Длит + Цена" скрыт в мульти-режиме; вместо него рендерится список позиций с qty ±, полем цены, кнопкой удаления и overridable полем "Итого". Сводка показывает `N позиций — ₪X`.
 
 **Файлы:**
+
 - `src/components/shared/ItemPickerSheet.tsx` — новый
 - `src/components/visits/UnifiedVisitDialog.tsx` — корзина, авто-расчёт, override, мульти-ветка submit
 - `public/sw.js` — регенерирован next-pwa при билде
 
 **Совместимость:**
+
 - Edit-mode не затронут — старый `ServicePicker` остаётся, одна услуга как раньше
 - Meeting-mode (встречи) не затронут
 - Мобилка не ломается — первая позиция кладётся в legacy-поле `service_id`/`price`/`duration`, остальные довешиваются через `visit_services`
@@ -982,12 +970,14 @@ chore: конфиг, зависимости
 **Контекст:** Ксения (Hair Rehab) запросила замену терминологии: раздел/меню "ביקורים" → "יומן" (журнал), счётчики визитов → "תורים" (записи).
 
 **Логика разделения терминов:**
+
 - **יומן** — название раздела, пункт меню, заголовок страницы /visits, PWA shortcut, группы уведомлений, описания модулей в биллинге
 - **תורים** — все счётчики, empty states, метки виджетов, статистика, column labels
 - **ביקור / ביקורים** — функциональные фразы (`הוסף ביקור`, `ביקור אחרון`, `סיים ביקור`, `ממוצע לביקור`, tab filter visit/meeting) **оставлены без изменений**
 - **terms/page.tsx** — юридический документ, термин "ביקורים" не трогали
 
-**Затронутые файлы (33 файла, ~80 точечных замен):**
+**Затронутые файлы (33 файла, \~80 точечных замен):**
+
 - `src/contexts/LanguageContext.tsx` — visits.title, clients.history, visitsMonth, widgets.visits_month, stats.visitsByMonth и др.
 - `src/lib/landing-pages.ts` — sidebar menu label_he: `יומן`
 - `public/manifest.json` — PWA shortcut: `יומן`
@@ -4184,3 +4174,53 @@ API `/api/payments` принимает `startDate`/`endDate` → фильтру�
 
 ### Commit
 `c5bddd1` — fix: remove greeting header from dashboard (Apr 24, 2026)
+
+---
+
+## [Apr 28, 2026] Рекуррентные платежи — завершение модуля
+
+### Задача
+Восстановить `settingsConfig.ts` после повреждения кодировкой (UTF-16LE вместо UTF-8), добавить карточку `recurring-plans` в настройки, исправить баги и задеплоить всё в production.
+
+### Что было сломано
+- `settingsConfig.ts` был перезаписан в UTF-16LE предыдущей PowerShell-сессией → `stream did not contain valid UTF-8` в webpack.
+- `useFeatures.ts`: в fallback-ветке (org без `modules`) обращение к `modules.subscriptions` при `modules === undefined` → потенциальный runtime TypeError.
+- `src/app/api/recurring-plans/[id]/route.ts`: `params` не обёрнут в `Promise<>` — TypeScript error в Next.js 16.
+
+### Что исправлено
+1. **`settingsConfig.ts`** — восстановлен из git HEAD (правильная UTF-8 с кириллицей/ивритом + BOM), затем добавлена карточка `recurring-plans` с `RefreshCw` иконкой и `featureFlag: 'recurringEnabled'`.
+2. **`useFeatures.ts`** — в последнем fallback-return: `recurringEnabled: false` (вместо `modules.subscriptions === true` при `undefined`).
+3. **`recurring-plans/[id]/route.ts`** — PATCH и DELETE переведены на `params: Promise<{ id: string }>` + `await params`.
+
+### Новые файлы/модули (рекуррентные платежи)
+- `src/app/(dashboard)/settings/recurring-plans/page.tsx` — страница управления планами подписок (CRUD: создать, редактировать, удалить). Фильтруется по `featureFlag: recurringEnabled`.
+- `src/app/api/recurring-plans/route.ts` — GET (список планов org), POST (создать план). Таблица `recurring_plans`.
+- `src/app/api/recurring-plans/[id]/route.ts` — PATCH (обновить), DELETE (удалить). Изолировано по `org_id`.
+- `src/app/api/payments/charge-recurring/route.ts` — POST ручного списания по токену карты через Tranzila CGI (`secure5.tranzila.com`). Пишет в `subscription_charges`, обновляет `next_billing_date`.
+- `src/components/clients/ClientDesktopPanel.tsx` — вкладка "Рекурр." в панели клиента: привязка карты (Tranzila iframe), оформление подписки, "Списать сейчас", пауза/возобновление, отмена, история списаний.
+
+### Архитектура рекуррентных платежей
+- `recurring_plans` — шаблоны планов org (name, price, billing_cycle, custom_days)
+- `client_subscriptions` — подписка клиента на план (card_token, expdate, next_billing_date, status)
+- `subscription_charges` — лог каждого списания (success/failed, tranzila_transaction_id)
+- Карта привязывается через Tranzila `tranmode=VK` iframe → callback → `clients.card_token` + `card_last4`
+- Ручное списание: `POST /api/payments/charge-recurring` → Tranzila CGI → запись в charges → update next_billing_date
+- Feature gate: `recurringEnabled = modules.subscriptions === true` в useFeatures (только для org с modules)
+
+### Регрессия
+Нет. Всё новое; fallback-фикс в useFeatures только устраняет потенциальный crash.
+
+### Безопасность
+Все API через `checkAuthAndFeature`, `org_id` из БД, RLS включён. `card_token` хранится только в `clients`, передаётся только server-to-server в Tranzila.
+
+### Затронутые файлы
+- `src/components/settings/settingsConfig.ts`
+- `src/hooks/useFeatures.ts`
+- `src/components/clients/ClientDesktopPanel.tsx`
+- `src/app/(dashboard)/settings/recurring-plans/page.tsx` (новый)
+- `src/app/api/recurring-plans/route.ts` (новый)
+- `src/app/api/recurring-plans/[id]/route.ts` (новый)
+- `src/app/api/payments/charge-recurring/route.ts` (новый)
+
+### Commit
+`3df1867` — feat(recurring): add recurring-plans settings page, charge-recurring API, fix params Promise type, fix useFeatures fallback crash (Apr 28, 2026)

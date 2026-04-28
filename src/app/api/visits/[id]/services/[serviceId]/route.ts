@@ -1,42 +1,92 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { getAuthContext } from '@/lib/auth-helpers'
+import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 /**
+ * PATCH /api/visits/[id]/services/[serviceId]
+ * Update quantity for a visit service line.
+ * Body: { quantity: number }   (must be >= 1)
+ *
  * DELETE /api/visits/[id]/services/[serviceId]
  * Remove service from visit
  */
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; serviceId: string }> }
+) {
+  try {
+    const auth = await getAuthContext(request)
+    if ('error' in auth) return auth.error
+    const { orgId } = auth
+    const { id: visitId, serviceId } = await params
+
+    const body = await request.json()
+    const quantity = parseInt(body.quantity, 10)
+
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      return NextResponse.json({ error: 'quantity must be >= 1' }, { status: 400 })
+    }
+
+    const supabase = createSupabaseServiceClient()
+
+    // Verify the visit belongs to this org
+    const { data: visit } = await supabase
+      .from('visits')
+      .select('id')
+      .eq('id', visitId)
+      .eq('org_id', orgId)
+      .single()
+
+    if (!visit) {
+      return NextResponse.json({ error: 'Visit not found' }, { status: 404 })
+    }
+
+    const { data, error } = await supabase
+      .from('visit_services')
+      .update({ quantity })
+      .eq('id', serviceId)
+      .eq('visit_id', visitId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[API] PATCH /api/visits/[id]/services/[serviceId] error:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ service: data })
+  } catch (error) {
+    console.error('[API] PATCH /api/visits/[id]/services/[serviceId] exception:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; serviceId: string }> }
 ) {
   try {
-    const { serviceId } = await params
+    const auth = await getAuthContext(request)
+    if ('error' in auth) return auth.error
+    const { orgId } = auth
+    const { id: visitId, serviceId } = await params
 
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
+    const supabase = createSupabaseServiceClient()
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Verify visit belongs to org
+    const { data: visit } = await supabase
+      .from('visits')
+      .select('id')
+      .eq('id', visitId)
+      .eq('org_id', orgId)
+      .single()
+
+    if (!visit) {
+      return NextResponse.json({ error: 'Visit not found' }, { status: 404 })
     }
 
-    const { id: visitId } = await params
-
-    // Fetch service price before deleting
+    // Fetch service data before deletion (for duration recalc)
     const { data: serviceData } = await supabase
       .from('visit_services')
       .select('price, duration_minutes, visit_id')
@@ -53,9 +103,7 @@ export async function DELETE(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Update visit duration only — NEVER touch visits.price.
-    // visits.price = base service price (immutable after creation).
-    // Total shown in UI = visits.price + sum(visit_services.price) computed dynamically.
+    // Recalculate visit duration
     if (serviceData) {
       const targetVisitId = serviceData.visit_id || visitId
       const { data: remaining } = await supabase
@@ -63,9 +111,11 @@ export async function DELETE(
         .select('duration_minutes')
         .eq('visit_id', targetVisitId)
 
-      const extraDuration = (remaining || []).reduce((sum, s) => sum + (Number(s.duration_minutes) || 0), 0)
+      const extraDuration = (remaining || []).reduce(
+        (sum, s) => sum + (Number(s.duration_minutes) || 0),
+        0
+      )
       if (extraDuration === 0) {
-        // All extras removed — restore base visit duration from service
         const { data: visitRow } = await supabase
           .from('visits')
           .select('services(duration_minutes)')

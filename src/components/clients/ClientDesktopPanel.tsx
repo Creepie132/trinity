@@ -75,6 +75,24 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
     }
   }, [isOpen, client?.id, activeTab])
 
+  // Слушаем postMessage от попапа Tranzila токенизации
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (event.data?.type === 'TRANZILA_TOKEN_SUCCESS') {
+        toast.success(locale === 'he' ? 'הכרטיס קושר בהצלחה' : 'Карта успешно привязана')
+        // Перезагружаем данные клиента чтобы показать новую карту
+        if (onSaved) {
+          fetch(`/api/clients/${client?.id}`)
+            .then(r => r.json())
+            .then(updated => onSaved(updated))
+            .catch(() => {})
+        }
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [client?.id, locale, onSaved])
+
   useEffect(() => {
     if (client) {
       setEditForm({
@@ -167,8 +185,12 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
     if (!subscription) return
     if (!client.card_token) {
       toast.error(locale === 'he'
-        ? 'אין טוקן כרטיס. הלקוח צריך לשלם ידנית תחילה.'
-        : 'Токен карты не найден. Клиент должен сначала оплатить вручную.')
+        ? 'אין טוקן כרטיס. יש לקשר כרטיס ללקוח תחילה.'
+        : 'Токен карты не найден. Сначала привяжите карту клиенту.')
+      return
+    }
+    if (!client.card_expdate) {
+      toast.error(locale === 'he' ? 'חסרה תאריך פקיעת כרטיס' : 'Отсутствует дата истечения карты')
       return
     }
     setCharging(true)
@@ -181,6 +203,7 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
           client_id: client.id,
           amount: subscription.price,
           card_token: client.card_token,
+          expdate: client.card_expdate,
         }),
       })
       const data = await res.json()
@@ -673,7 +696,61 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
                 <p className="text-center py-12 text-muted-foreground text-sm">{l.loading}</p>
               ) : (
                 <div className="space-y-5">
-                  {/* Subscription block */}
+                  {/* Блок привязки карты */}
+                  {!client.card_token ? (
+                    <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                      <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-1">
+                        {locale === 'he' ? '⚠️ לא קושר כרטיס' : '⚠️ Карта не привязана'}
+                      </p>
+                      <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
+                        {locale === 'he'
+                          ? 'לביצוע חיובים אוטומטיים יש לקשר כרטיס אשראי של הלקוח'
+                          : 'Для автоматических списаний нужно привязать карту клиента'}
+                      </p>
+                      <button
+                        onClick={() => {
+                          const baseUrl = 'https://direct.tranzila.com/hrehabtok/iframenew.php'
+                          const params = new URLSearchParams({
+                            hidesum: '1',
+                            currency: '1',
+                            tranmode: 'VK',
+                            cred_type: '1',
+                            lang: locale === 'he' ? 'heb' : 'rus',
+                            ok_url: `${window.location.origin}/api/payments/tranzila-token-callback?client_id=${client.id}`,
+                            fail_url: `${window.location.origin}/api/payments/tranzila-token-callback?client_id=${client.id}&fail=1`,
+                          })
+                          window.open(`${baseUrl}?${params}`, '_blank', 'width=500,height=600')
+                        }}
+                        className="px-4 py-2 rounded-xl bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 transition"
+                      >
+                        {locale === 'he' ? '💳 קשר כרטיס' : '💳 Привязать карту'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
+                      <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                        💳 {locale === 'he' ? `כרטיס: **** ${client.card_last4 || '****'}` : `Карта: **** ${client.card_last4 || '****'}`}
+                      </p>
+                      <button
+                        onClick={() => {
+                          const baseUrl = 'https://direct.tranzila.com/hrehabtok/iframenew.php'
+                          const params = new URLSearchParams({
+                            hidesum: '1',
+                            currency: '1',
+                            tranmode: 'VK',
+                            cred_type: '1',
+                            lang: locale === 'he' ? 'heb' : 'rus',
+                            ok_url: `${window.location.origin}/api/payments/tranzila-token-callback?client_id=${client.id}`,
+                            fail_url: `${window.location.origin}/api/payments/tranzila-token-callback?client_id=${client.id}&fail=1`,
+                          })
+                          window.open(`${baseUrl}?${params}`, '_blank', 'width=500,height=600')
+                        }}
+                        className="text-xs text-muted-foreground hover:text-foreground underline"
+                      >
+                        {locale === 'he' ? 'החלף כרטיס' : 'Заменить'}
+                      </button>
+                    </div>
+                  )}
                   {!subscription ? (
                     <div className="text-center py-8 border-2 border-dashed border-muted rounded-xl">
                       <RefreshCw className="w-10 h-10 mx-auto text-muted-foreground mb-3" />

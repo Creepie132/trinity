@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 /**
  * UnifiedPaymentDialog — Master Component для всех платежей Trinity.
@@ -30,7 +30,7 @@ import { toast } from 'sonner'
 import {
   CreditCard, Banknote, Link, CheckCircle2,
   Loader2, AlertCircle, X, ArrowLeft, MessageCircle,
-  FileCheck, Building2, Smartphone,
+  FileCheck, Building2, Smartphone, RefreshCw,
 } from 'lucide-react'
 import { PaymentSuccessView, PaymentSuccessSidebar } from '@/components/payments/PaymentSuccessView'
 import { usePaymentMethodConfig } from '@/hooks/usePaymentMethodConfig'
@@ -38,11 +38,12 @@ import {
   CheckForm, BankTransferForm, CashForm, IL_CASH_LIMIT,
   type CheckPaymentDetails, type BankTransferDetails, type CashFormData,
 } from '@/components/payments/PaymentDetailForms'
+import { InstallmentForm, type InstallmentConfig, type ClientCardToken } from '@/components/payments/InstallmentForm'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type PaymentMethod = 'cash' | 'bit' | 'link' | 'check' | 'bank_transfer'
-type Step = 'method-select' | 'cash-form' | 'bit-form' | 'link-form' | 'check-form' | 'bank-form' | 'success'
+export type PaymentMethod = 'cash' | 'bit' | 'link' | 'check' | 'bank_transfer' | 'installment'
+type Step = 'method-select' | 'cash-form' | 'bit-form' | 'link-form' | 'check-form' | 'bank-form' | 'installment-form' | 'success'
 
 export interface UnifiedPaymentModalData {
   clientId?: string
@@ -120,6 +121,8 @@ const I18N = {
     toPayLabel: 'לתשלום', paidLabel: 'שולם ✓',
     errorTitle: 'שגיאה בביצוע פעולה',
     loadingMethods: 'טוען שיטות תשלום...',
+    installment: 'תשלומים', installmentDesc: 'חלוקה לתשלומים בכרטיס',
+    successInstallment: '✓ תוכנית תשלומים נוצרה בהצלחה',
   },
   ru: {
     title: 'Новый платёж', selectMethod: 'Выберите способ оплаты',
@@ -150,6 +153,8 @@ const I18N = {
     toPayLabel: 'К оплате', paidLabel: 'Оплачено ✓',
     errorTitle: 'Ошибка при выполнении',
     loadingMethods: 'Загрузка способов оплаты...',
+    installment: 'Рассрочка', installmentDesc: 'Разбить оплату на платежи по карте',
+    successInstallment: '✓ План рассрочки создан успешно',
   },
 } as const
 
@@ -164,6 +169,7 @@ const METHODS: {
   { id: 'check',         gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', glow: 'rgba(245,158,11,0.3)', bg: 'linear-gradient(135deg,#fffbeb,#fef3c7)', border: '#fde68a', color: '#b45309' },
   { id: 'bank_transfer', gradient: 'linear-gradient(135deg,#0ea5e9,#0284c7)', glow: 'rgba(14,165,233,0.3)', bg: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', border: '#bae6fd', color: '#0369a1' },
   { id: 'link',          gradient: 'linear-gradient(135deg,#8b5cf6,#7c3aed)', glow: 'rgba(139,92,246,0.3)', bg: 'linear-gradient(135deg,#faf5ff,#ede9fe)', border: '#ddd6fe', color: '#6d28d9' },
+  { id: 'installment',    gradient: 'linear-gradient(135deg,#06b6d4,#0891b2)', glow: 'rgba(6,182,212,0.3)',   bg: 'linear-gradient(135deg,#ecfeff,#cffafe)', border: '#a5f3fc', color: '#0e7490' },
 ]
 
 const METHOD_ICONS: Record<PaymentMethod, React.ReactNode> = {
@@ -172,6 +178,7 @@ const METHOD_ICONS: Record<PaymentMethod, React.ReactNode> = {
   check:         <FileCheck size={22} />,
   bank_transfer: <Building2 size={22} />,
   link:          <Link size={22} />,
+  installment:   <RefreshCw size={22} />,
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -218,6 +225,8 @@ export function UnifiedPaymentDialog({
   const [bankValid, setBankValid] = useState(false)
   const [cashData, setCashData] = useState<CashFormData | null>(null)
   const [cashValid, setCashValid] = useState(true)
+  const [installmentConfig, setInstallmentConfig] = useState<InstallmentConfig | null>(null)
+  const [clientToken, setClientToken] = useState<ClientCardToken | null>(null)
 
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -239,14 +248,17 @@ export function UnifiedPaymentDialog({
     setCheckDetails(null); setCheckValid(false)
     setBankDetails(null); setBankValid(false)
     setCashData(null); setCashValid(true)
+    setInstallmentConfig(null); setClientToken(null)
     setAmount(sd.prefillAmount != null ? String(sd.prefillAmount) : '')
     if (sd.clientId && sd.clientName) {
       const parts = sd.clientName.trim().split(' ')
       const first_name = parts[0] ?? sd.clientName
       const last_name = parts.slice(1).join(' ')
       setSelectedClient({ id: sd.clientId, first_name, last_name, phone: sd.clientPhone || '' })
+      loadClientToken(sd.clientId)
     } else {
       setSelectedClient(null)
+      setClientToken(null)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -257,6 +269,7 @@ export function UnifiedPaymentDialog({
     step === 'check-form' ? checkValid :
     step === 'bank-form'  ? bankValid  :
     step === 'cash-form'  ? cashValid && amountNum <= IL_CASH_LIMIT :
+    step === 'installment-form' ? !!installmentConfig && !!clientToken :
     true
   )
 
@@ -265,6 +278,7 @@ export function UnifiedPaymentDialog({
     : step === 'bit-form' ? 'bit'
     : step === 'check-form' ? 'check'
     : step === 'bank-form' ? 'bank_transfer'
+    : step === 'installment-form' ? 'installment'
     : step === 'link-form' ? 'link'
     : step === 'success' && paymentLink ? 'link'
     : step === 'success' ? 'cash'
@@ -280,6 +294,7 @@ export function UnifiedPaymentDialog({
     setCheckDetails(null); setCheckValid(false)
     setBankDetails(null); setBankValid(false)
     setCashData(null); setCashValid(true)
+    setInstallmentConfig(null); setClientToken(null)
     setStep('method-select')
     onOpenChange(false)
   }, [onOpenChange])
@@ -292,6 +307,7 @@ export function UnifiedPaymentDialog({
       link:          'link-form',
       check:         'check-form',
       bank_transfer: 'bank-form',
+      installment:   'installment-form',
     }
     setStep(stepMap[method])
   }, [])
@@ -302,8 +318,24 @@ export function UnifiedPaymentDialog({
     setCheckDetails(null); setCheckValid(false)
     setBankDetails(null); setBankValid(false)
     setCashData(null); setCashValid(true)
+    setInstallmentConfig(null); setClientToken(null)
     setStep('method-select')
   }, [])
+
+  // Load stored card token for the selected client (for installment payments)
+  const loadClientToken = async (cid: string) => {
+    setClientToken(null)
+    try {
+      const res = await fetch('/api/clients/' + cid)
+      if (!res.ok) return
+      const data = await res.json()
+      const tk = data?.tranzila_token
+      const exp = data?.tranzila_expdate
+      if (tk && exp) {
+        setClientToken({ tranzila_token: tk, tranzila_expdate: exp, card_last4: data?.card_last4 || undefined })
+      }
+    } catch { /* no token */ }
+  }
 
   const handleSubmit = useCallback(async () => {
     if (isSubmittingRef.current) return
@@ -385,6 +417,29 @@ export function UnifiedPaymentDialog({
         toast.success(t.successBank); safeData.onSuccess?.(); setStep('success'); return
       }
 
+      if (step === 'installment-form') {
+        if (!installmentConfig || !clientToken) { toast.error(t.fillRequired); isSubmittingRef.current = false; return }
+        const res = await fetch('/api/installments', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            client_id: selectedClient.id,
+            visit_id: safeData.visitId ?? null,
+            sale_id: safeData.saleId ?? null,
+            total_amount: amountNum,
+            installments_count: installmentConfig.count,
+            frequency: installmentConfig.frequency,
+            tranzila_token: clientToken.tranzila_token,
+            tranzila_expdate: clientToken.tranzila_expdate,
+            card_last4: clientToken.card_last4,
+          }),
+        })
+        if (!res.ok) { const err = await res.json(); throw new Error(err.error || t.errorGeneric) }
+        queryClient.invalidateQueries({ queryKey: ['payments'] })
+        queryClient.invalidateQueries({ queryKey: ['installments'] })
+        queryClient.invalidateQueries({ queryKey: ['sales'] })
+        toast.success((t as any).successInstallment || '✓ Plan created'); safeData.onSuccess?.(); setStep('success'); return
+      }
+
       if (step === 'link-form') {
         const result = await createPaymentLinkMutation.mutateAsync({
           client_id: selectedClient.id, amount: amountNum,
@@ -410,6 +465,7 @@ export function UnifiedPaymentDialog({
     notes, description, safeData, queryClient,
     createPaymentLinkMutation, t,
     checkDetails, checkValid, bankDetails, bankValid, cashData, cashValid,
+    installmentConfig, clientToken,
   ])
 
   const handleCopyLink = useCallback(() => {
@@ -561,6 +617,48 @@ export function UnifiedPaymentDialog({
         onClose={handleClose} locale={isHe ? 'he' : 'ru'}
       />
     )
+
+    // ── Installment form ─────────────────────────────────────────────────
+    if (step === 'installment-form') {
+      const accentBg = 'linear-gradient(135deg,#ecfeff,#cffafe)'
+      const accentBorder = '#a5f3fc'
+      const accentColor = '#0e7490'
+      return (
+        <div style={{ padding: '20px 18px 24px' }} className="space-y-5">
+          {errorMsg && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12 }}>
+              <AlertCircle size={16} style={{ color: '#ef4444', flexShrink: 0, marginTop: 1 }} />
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#dc2626', margin: '0 0 2px' }}>{t.errorTitle}</p>
+                <p style={{ fontSize: 11, color: '#ef4444', margin: 0 }}>{errorMsg}</p>
+              </div>
+              <button onClick={() => setErrorMsg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 0 }}><X size={14} /></button>
+            </div>
+          )}
+          <div style={{ background: accentBg, border: '1px solid #a5f3fc', borderRadius: 14, padding: '14px 16px' }}>
+            <label style={{ fontSize: 10, fontWeight: 700, color: accentColor, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.client} *</label>
+            <ClientSearch orgId={searchOrgId} onSelect={c => { setSelectedClient(c); loadClientToken(c.id) }} placeholder={t.selectClient} locale={language as 'he' | 'ru' | 'en'} value={selectedClient} />
+          </div>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '14px 16px' }}>
+            <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.amount} *</label>
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', insetInlineStart: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 18, fontWeight: 700, color: accentColor, pointerEvents: 'none' }}>₪</span>
+              <Input type="number" step="0.01" min="0" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" disabled={isLoading}
+                style={{ paddingInlineStart: 36, fontSize: 18, fontWeight: 700, height: 48, border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff' }} />
+            </div>
+          </div>
+          {isAmountValid && selectedClient && (
+            <InstallmentForm
+              totalAmount={amountNum}
+              clientToken={clientToken}
+              disabled={isLoading}
+              locale={isHe ? 'he' : 'ru'}
+              onChange={setInstallmentConfig}
+            />
+          )}
+        </div>
+      )
+    }
 
     // ── Bit form ─────────────────────────────────────────────────────────────
     if (step === 'bit-form') return (
@@ -740,3 +838,4 @@ export function UnifiedPaymentDialog({
     </Modal>
   )
 }
+

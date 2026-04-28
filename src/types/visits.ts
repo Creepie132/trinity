@@ -5,7 +5,8 @@ export interface VisitService {
   service_id?: string
   service_name: string
   service_name_ru?: string
-  price: number
+  price: number          // price per unit
+  quantity: number       // number of units (default 1)
   duration_minutes: number
   created_at: string
 }
@@ -18,6 +19,7 @@ export interface CreateVisitServiceDTO {
   service_name_ru?: string
   price: number
   duration_minutes: number
+  quantity?: number
 }
 
 // Unified Visit type for entire application

@@ -22,10 +22,10 @@ import {
   ArrowLeft, ArrowRight, Phone, MessageCircle, MessageSquare,
   Scissors, Package, Play, CheckCircle, X, Pencil,
   Calendar, Clock, FileText, History, MapPin, Video,
-  ExternalLink, Navigation, ChevronRight, Plus, Loader2, Search,
+  ExternalLink, Navigation, ChevronRight, Plus, Minus, Loader2, Search,
 } from 'lucide-react'
 import { useModalStore } from '@/store/useModalStore'
-import { useVisitServices, useRemoveVisitService, useAddVisitService } from '@/hooks/useVisitServices'
+import { useVisitServices, useRemoveVisitService, useAddVisitService, useUpdateVisitServiceQty } from '@/hooks/useVisitServices'
 import { useServices } from '@/hooks/useServices'
 import { useProducts } from '@/hooks/useProducts'
 import { useQueryClient } from '@tanstack/react-query'
@@ -120,6 +120,7 @@ export function VisitDetailMob({
   const { data: visitServicesFromHook } = useVisitServices(visit?.id || '')
   const visitServices = visitServicesFromHook ?? visit?.visit_services ?? []
   const removeVisitService = useRemoveVisitService(visit?.id || '')
+  const updateQty = useUpdateVisitServiceQty(visit?.id || '')
   const addVisitService = useAddVisitService(visit?.id || '')
   const { data: allServices = [] } = useServices()
   const { data: allProducts = [] } = useProducts()
@@ -232,7 +233,7 @@ export function VisitDetailMob({
     ? (isHe ? visit.services.name : (visit.services.name_ru || visit.services.name))
     : serviceName
 
-  const totalPrice = (visit.price || 0) + visitServices.reduce((s: number, vs: any) => s + (vs.price || 0), 0)
+  const totalPrice = (visit.price || 0) + visitServices.reduce((s: number, vs: any) => s + (vs.price || 0) * (vs.quantity ?? 1), 0)
 
   const sidebarBg   = 'var(--trinity-sidebar-bg, #1a2620)'
   const accentColor = 'var(--trinity-accent, #2d6a4f)'
@@ -403,13 +404,34 @@ export function VisitDetailMob({
                       {visitServices.map((vs: any) => {
                         const name = isHe ? vs.service_name : (vs.service_name_ru || vs.service_name)
                         const isProd = !vs.service_id && vs.duration_minutes === 0
+                        const qty = vs.quantity ?? 1
+                        const lineTotal = (vs.price || 0) * qty
                         return (
-                          <div key={vs.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div key={vs.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderTop: '1px solid rgba(255,255,255,0.05)', flexWrap: 'wrap' }}>
                             <div style={{ width: 26, height: 26, borderRadius: 7, background: isProd ? 'rgba(251,191,36,0.15)' : 'rgba(96,165,250,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               {isProd ? <Package size={12} color="#fbbf24" /> : <Scissors size={12} color="#60a5fa" />}
                             </div>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', flex: 1 }}>{name}</span>
-                            {vs.price > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: accentText }}>₪{vs.price}</span>}
+                            <span style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', flex: 1, minWidth: 50 }}>{name}</span>
+                            {/* Qty controls — mobile optimised (touch-friendly) */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                              <button
+                                onClick={() => qty > 1 && updateQty.mutate({ serviceId: vs.id, quantity: qty - 1 })}
+                                disabled={qty <= 1}
+                                style={{ width: 24, height: 24, borderRadius: 7, border: '1px solid rgba(255,255,255,0.12)', background: qty <= 1 ? 'rgba(255,255,255,0.04)' : 'rgba(96,165,250,0.18)', cursor: qty <= 1 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <Minus size={10} color={qty <= 1 ? 'rgba(255,255,255,0.2)' : '#60a5fa'} />
+                              </button>
+                              <input
+                                type="number" min={1} value={qty}
+                                onChange={e => { const v = parseInt(e.target.value); if (v >= 1) updateQty.mutate({ serviceId: vs.id, quantity: v }) }}
+                                style={{ width: 34, height: 24, textAlign: 'center', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6, fontSize: 12, fontWeight: 700, color: '#e2e8f0', background: 'rgba(255,255,255,0.06)', outline: 'none', padding: 0 }}
+                              />
+                              <button
+                                onClick={() => updateQty.mutate({ serviceId: vs.id, quantity: qty + 1 })}
+                                style={{ width: 24, height: 24, borderRadius: 7, border: '1px solid rgba(96,165,250,0.3)', background: 'rgba(96,165,250,0.18)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <Plus size={10} color="#60a5fa" />
+                              </button>
+                            </div>
+                            {vs.price > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: accentText, minWidth: 38, textAlign: 'end' }}>₪{lineTotal}</span>}
                             <button onClick={() => { removeVisitService.mutate(vs.id) }}
                               style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(239,68,68,0.2)', border: 'none', cursor: 'pointer', color: '#f87171', fontSize: 9, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
                           </div>

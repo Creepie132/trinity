@@ -6,6 +6,9 @@
     },
     "src/app/api/kira/cron/route.ts": {
       "maxDuration": 300
+    },
+    "src/app/api/cron/charge-installments/route.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [
@@ -48,6 +51,10 @@
     {
       "path": "/api/cron/wa-triggers",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/charge-installments",
+      "schedule": "0 7 * * *"
     }
   ]
 }

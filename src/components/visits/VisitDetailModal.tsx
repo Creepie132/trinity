@@ -1,11 +1,11 @@
-﻿'use client'
+'use client'
 
 import {
-  Phone, MessageCircle, MessageSquare, Pencil, X, Plus, Clock,
+  Phone, MessageCircle, MessageSquare, Pencil, X, Plus, Minus, Clock,
   Calendar, Scissors, ShoppingBag, FileText, History, ArrowLeft, Download,
   Package, ChevronRight, Loader2, CheckCircle, Play, MapPin, Video, Navigation, ExternalLink,
 } from 'lucide-react'
-import { useVisitServices, useRemoveVisitService } from '@/hooks/useVisitServices'
+import { useVisitServices, useRemoveVisitService, useUpdateVisitServiceQty } from '@/hooks/useVisitServices'
 import { useQueryClient } from '@tanstack/react-query'
 import { useModalStore } from '@/store/useModalStore'
 import { toast } from 'sonner'
@@ -73,6 +73,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   const { data: visitServicesFromHook } = useVisitServices(visit?.id || '')
   const visitServices = visitServicesFromHook ?? visit?.visit_services ?? []
   const removeVisitService = useRemoveVisitService(visit?.id || '')
+  const updateQty = useUpdateVisitServiceQty(visit?.id || '')
   const queryClient = useQueryClient()
   const { openModal } = useModalStore()
 
@@ -353,13 +354,34 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
             {visitServices.map((vs: any) => {
               const name = isHe ? vs.service_name : (vs.service_name_ru || vs.service_name)
               const isProduct = !vs.service_id && vs.duration_minutes === 0
+              const qty = vs.quantity ?? 1
+              const lineTotal = (vs.price || 0) * qty
               return (
-                <div key={vs.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderTop: '0.5px solid #f1f5f9' }}>
+                <div key={vs.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderTop: '0.5px solid #f1f5f9', flexWrap: 'wrap' }}>
                   <div style={{ width: 28, height: 28, borderRadius: 8, background: isProduct ? '#fef9c3' : '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     {isProduct ? <Package size={13} color="#ca8a04" /> : <Scissors size={13} color="#3b82f6" />}
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#1e293b', flex: 1 }}>{name}</span>
-                  {vs.price > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>₪{vs.price}</span>}
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#1e293b', flex: 1, minWidth: 60 }}>{name}</span>
+                  {/* Qty controls */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                    <button
+                      onClick={() => qty > 1 && updateQty.mutate({ serviceId: vs.id, quantity: qty - 1 })}
+                      disabled={qty <= 1}
+                      style={{ width: 20, height: 20, borderRadius: 6, border: '0.5px solid #e2e8f0', background: qty <= 1 ? '#f8fafc' : '#eff6ff', cursor: qty <= 1 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Minus size={10} color={qty <= 1 ? '#cbd5e1' : '#3b82f6'} />
+                    </button>
+                    <input
+                      type="number" min={1} value={qty}
+                      onChange={e => { const v = parseInt(e.target.value); if (v >= 1) updateQty.mutate({ serviceId: vs.id, quantity: v }) }}
+                      style={{ width: 32, height: 20, textAlign: 'center', border: '0.5px solid #e2e8f0', borderRadius: 5, fontSize: 11, fontWeight: 700, color: '#1e293b', background: '#f8fafc', outline: 'none', padding: 0 }}
+                    />
+                    <button
+                      onClick={() => updateQty.mutate({ serviceId: vs.id, quantity: qty + 1 })}
+                      style={{ width: 20, height: 20, borderRadius: 6, border: '0.5px solid #e2e8f0', background: '#eff6ff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Plus size={10} color="#3b82f6" />
+                    </button>
+                  </div>
+                  {vs.price > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: '#1e293b', minWidth: 40, textAlign: 'end' }}>₪{lineTotal}</span>}
                   <button onClick={() => { removeVisitService.mutate(vs.id); setPriceOffset(p => p - vs.price) }}
                     style={{ width: 18, height: 18, borderRadius: '50%', background: '#fee2e2', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 9, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
                 </div>
@@ -368,7 +390,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
             {visitServices.length > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f8fafc', borderTop: '0.5px solid #e8edf4' }}>
                 <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{isHe ? 'סה״כ' : 'Итого'}</span>
-                <span style={{ fontSize: 14, fontWeight: 800, color: '#10b981' }}>₪{(visit.price || 0) + visitServices.reduce((s: number, vs: any) => s + (vs.price || 0), 0)}</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: '#10b981' }}>₪{(visit.price || 0) + visitServices.reduce((s: number, vs: any) => s + (vs.price || 0) * (vs.quantity ?? 1), 0)}</span>
               </div>
             )}
           </div>
@@ -470,7 +492,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   }
 
   const renderServices = () => {
-    const total = (visit.price || 0) + visitServices.reduce((s: number, vs: any) => s + (vs.price || 0), 0)
+    const total = (visit.price || 0) + visitServices.reduce((s: number, vs: any) => s + (vs.price || 0) * (vs.quantity ?? 1), 0)
     return (
       <div className="flex flex-col" style={{ minHeight: '55vh', padding: '16px 16px 20px' }}>
         <div className="flex-1 overflow-y-auto space-y-2 pb-3">
@@ -489,8 +511,10 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
             : visitServices.map((vs: any) => {
               const name = isHe ? vs.service_name : (vs.service_name_ru || vs.service_name)
               const isProduct = !vs.service_id && vs.duration_minutes === 0
+              const qty = vs.quantity ?? 1
+              const lineTotal = (vs.price || 0) * qty
               return (
-                <div key={vs.id} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                <div key={vs.id} className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors flex-wrap">
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${isProduct ? 'bg-amber-100' : 'bg-blue-100'}`}>
                     {isProduct ? <Package className="w-4 h-4 text-amber-600" /> : <Scissors className="w-4 h-4 text-blue-600" />}
                   </div>
@@ -498,7 +522,27 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
                     <p className="text-sm font-semibold text-gray-800 truncate">{name}</p>
                     {vs.duration_minutes > 0 && <p className="text-xs text-gray-400">{formatDuration(vs.duration_minutes)}</p>}
                   </div>
-                  {vs.price > 0 && <span className="text-sm font-bold text-gray-700 flex-shrink-0">₪{vs.price}</span>}
+                  {/* Qty controls */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      onClick={() => qty > 1 && updateQty.mutate({ serviceId: vs.id, quantity: qty - 1 })}
+                      disabled={qty <= 1}
+                      className={`w-6 h-6 rounded-md border flex items-center justify-center transition-colors ${qty <= 1 ? 'border-gray-200 bg-gray-50 cursor-default' : 'border-blue-200 bg-blue-50 hover:bg-blue-100 cursor-pointer'}`}>
+                      <Minus className={`w-3 h-3 ${qty <= 1 ? 'text-gray-300' : 'text-blue-500'}`} />
+                    </button>
+                    <input
+                      type="number" min={1} value={qty}
+                      onChange={e => { const v = parseInt(e.target.value); if (v >= 1) updateQty.mutate({ serviceId: vs.id, quantity: v }) }}
+                      className="w-9 h-6 text-center text-xs font-bold text-gray-800 border border-gray-200 rounded-md bg-white outline-none focus:ring-1 focus:ring-blue-300"
+                      style={{ padding: 0 }}
+                    />
+                    <button
+                      onClick={() => updateQty.mutate({ serviceId: vs.id, quantity: qty + 1 })}
+                      className="w-6 h-6 rounded-md border border-blue-200 bg-blue-50 hover:bg-blue-100 flex items-center justify-center cursor-pointer transition-colors flex-shrink-0">
+                      <Plus className="w-3 h-3 text-blue-500" />
+                    </button>
+                  </div>
+                  {vs.price > 0 && <span className="text-sm font-bold text-gray-700 flex-shrink-0 min-w-[40px] text-end">₪{lineTotal}</span>}
                   <button onClick={() => { removeVisitService.mutate(vs.id); setPriceOffset(p => p - vs.price) }} className="w-7 h-7 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center flex-shrink-0 transition-colors">
                     <X className="w-3.5 h-3.5 text-red-400" />
                   </button>
@@ -618,7 +662,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
       {(visitServices.length > 0 || (visit.price || 0) > 0) && (
         <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px 8px', textAlign: 'center', marginBottom: 10 }}>
           <div style={{ fontSize: 18, fontWeight: 800, color: '#34d399' }}>
-            ₪{(visit.price || 0) + visitServices.reduce((s: number, vs: any) => s + (vs.price || 0), 0)}
+            ₪{(visit.price || 0) + visitServices.reduce((s: number, vs: any) => s + (vs.price || 0) * (vs.quantity ?? 1), 0)}
           </div>
           <div style={{ fontSize: 9, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>{isHe ? 'סה״כ' : 'Итого'}</div>
         </div>

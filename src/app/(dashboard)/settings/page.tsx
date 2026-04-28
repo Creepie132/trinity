@@ -94,6 +94,7 @@ export default function SettingsPage() {
         if (!features.isLoading) {
           if (item.featureFlag === 'hasBranches' && !features.hasBranches) return false
           if (item.featureFlag === 'hasBooking' && features.hasBooking === false) return false
+          if (item.featureFlag === 'recurringEnabled' && !features.recurringEnabled) return false
         }
         if (item.permissionFlag === 'canManageServices' && permissions.canManageServices === false) return false
         if (item.permissionFlag === 'canManageCareInstructions' && permissions.canManageCareInstructions === false) return false

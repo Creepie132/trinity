@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { createClient as createAdmin } from '@supabase/supabase-js'
@@ -25,7 +26,7 @@ export async function GET(
 
   const { data, error } = await supabaseAdmin
     .from('clients')
-    .select('id, first_name, last_name, phone, email, address, city, date_of_birth, notes, description, paint_code, preferred_languages, created_at, org_id')
+    .select('id, first_name, last_name, phone, email, address, city, date_of_birth, notes, description, paint_code, preferred_languages, created_at, org_id, tranzila_token, tranzila_expdate, card_last4')
     .eq('id', id)
     .eq('org_id', orgId)
     .single()
@@ -81,7 +82,6 @@ export async function PUT(
         { status: 400 }
       )
     }
-    // уникализируем (на случай ['he','he'])
     langs = Array.from(new Set(filtered))
   }
 

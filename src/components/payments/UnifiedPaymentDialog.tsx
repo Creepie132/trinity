@@ -194,13 +194,15 @@ export function UnifiedPaymentDialog({
 
   // Загружаем конфиг включённых методов. staleTime=0 → всегда актуально из БД.
   // ВАЖНО: пока грузится — allowedMethodIds пустой. Нет fallback на все методы.
-  const { enabledMethods: configMethods, isLoading: methodsLoading } = usePaymentMethodConfig()
+  const { enabledMethods: configMethods, isLoading: methodsLoading, hasTerminal } = usePaymentMethodConfig()
   const allowedMethodIds = new Set(
     methodsLoading
       ? [] as string[]
       : configMethods.map(m => m.key as string)
   )
   const visibleMethods = METHODS.filter(m => {
+    // Installment: показываем всегда когда есть token terminal (Tranzila)
+    if (m.id === 'installment') return hasTerminal
     if (m.id === 'link') return allowedMethodIds.has('card') || allowedMethodIds.has('link')
     return allowedMethodIds.has(m.id)
   })

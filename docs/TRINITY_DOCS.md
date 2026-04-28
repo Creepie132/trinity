@@ -996,8 +996,7 @@ chore: конфиг, зависимости
 - `src/components/ui/TrinityMob.tsx`, `src/components/debts/DebtsContent.tsx`
 - `src/app/demo/register/page.tsx` → `יומן פגישות` (коллизия с `diary: יומן`)
 - `src/app/demo/callback/google/page.tsx`, `src/app/onboarding/trial/page.tsx`
-- `src/app/api/mobile/preferences/route.ts` — mobile navbar label **Build:** `npm run build` чистый, 0 ошибок.
-**Регрессия:** нет — все функциональные фразы (кнопки действий, filter by event type) намеренно сохранены. Tab filter в `/visits` (`all/visit/meeting`) оставлен без изменений как категория события.
+- `src/app/api/mobile/preferences/route.ts` — mobile navbar label **Build:** `npm run build` чистый, 0 ошибок. **Регрессия:** нет — все функциональные фразы (кнопки действий, filter by event type) намеренно сохранены. Tab filter в `/visits` (`all/visit/meeting`) оставлен без изменений как категория события.
 
 ---
 

@@ -451,6 +451,7 @@ export function UnifiedPaymentDialog({
           client_id: selectedClient.id, amount: amountNum,
           description: description.trim() || `Оплата — ${selectedClient.first_name} ${selectedClient.last_name}`,
           visit_id: safeData.visitId, sale_id: safeData.saleId,
+          installments: linkInstallments > 1 ? linkInstallments : undefined,
         })
         if (!result?.payment_link) throw new Error('No payment link returned from API')
         setPaymentLink(result.payment_link)

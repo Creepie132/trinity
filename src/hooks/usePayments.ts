@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+﻿import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Payment } from '@/types/database'
 import { useBranch } from '@/contexts/BranchContext'
 
@@ -20,6 +20,7 @@ interface CreatePaymentLinkParams {
   description?: string
   visit_id?: string
   sale_id?: string   // ← привязка платёж-ссылки к сделке
+  installments?: number
 }
 
 interface PaymentsFilters {

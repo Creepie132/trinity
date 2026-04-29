@@ -149,40 +149,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Приоритет источников языка (чтобы веб и PWA были синхронизированы через БД):
-  //   1. БД (org_users.preferred_language) — истина для залогиненного пользователя
-  //   2. cookie trinity_locale — fallback для гостей и для быстрого SSR без DB-запроса
-  //   3. 'he' — дефолт
   const cookieStore = await cookies();
-  const localeCookie = cookieStore.get('trinity_locale')?.value;
 
-  let locale: 'he' | 'ru' = localeCookie === 'ru' ? 'ru' : 'he';
-
-  // Читаем из БД только если юзер залогинен. getUserPreferences() вернёт {} если нет auth.
-  // Не падаем на любой ошибке — cookie-fallback выше уже применён.
-  try {
-    const prefs = await getUserPreferences();
-    if (prefs.preferred_language === 'ru' || prefs.preferred_language === 'he') {
-      locale = prefs.preferred_language;
-      // Если cookie отстаёт от БД (другое устройство / PWA) — обновляем, чтобы
-      // следующий SSR работал без DB-запроса. Тихо ошибку игнорируем.
-      if (localeCookie !== locale) {
-        try {
-          cookieStore.set('trinity_locale', locale, {
-            maxAge: 60 * 60 * 24 * 365,
-            path: '/',
-            sameSite: 'lax',
-            secure: process.env.NODE_ENV === 'production',
-          });
-        } catch { /* Server Component read-only cookie store в некоторых ветках Next 16 */ }
-      }
-    }
-  } catch { /* нет auth или DB недоступна — используем cookie */ }
-
-  const dir = locale === 'he' ? 'rtl' : 'ltr';
-
-  // Лендинг — полная изоляция: ltr, inter, без Trinity-провайдеров.
-  // Проверяем ВСЕ возможные источники pathname в SSR:
+  // ── isLanding определяется ПЕРВЫМ — до любых DB-запросов ────────────────────
+  // Лендинг — статическая страница без auth. getUserPreferences() на /landing
+  // делал сетевой запрос к Supabase и при медленном ответе вызывал 504.
   const hdrs = await headers();
   const pathCandidates = [
     hdrs.get('x-trinity-page') === 'landing' ? '/landing' : '',
@@ -209,6 +180,27 @@ export default async function RootLayout({
       </html>
     );
   }
+
+  // Для всех остальных страниц — определяем язык из cookie/БД
+  const localeCookie = cookieStore.get('trinity_locale')?.value;
+  let locale: 'he' | 'ru' = localeCookie === 'ru' ? 'ru' : 'he';
+  try {
+    const prefs = await getUserPreferences();
+    if (prefs.preferred_language === 'ru' || prefs.preferred_language === 'he') {
+      locale = prefs.preferred_language;
+      if (localeCookie !== locale) {
+        try {
+          cookieStore.set('trinity_locale', locale, {
+            maxAge: 60 * 60 * 24 * 365,
+            path: '/',
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
+          });
+        } catch { /* read-only cookie store */ }
+      }
+    }
+  } catch { /* нет auth или DB недоступна */ }
+  const dir = locale === 'he' ? 'rtl' : 'ltr';
 
   return (
     <html lang={locale} dir={dir} className="light" suppressHydrationWarning>

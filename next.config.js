@@ -30,12 +30,58 @@ const withPWA = require('@ducanh2912/next-pwa').default({
     // Максимальный размер файла для precache (5MB — для крупных JS-чанков)
     maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
 
-    // Исключаем из precache: карты, большие медиафайлы
+      // Исключаем из precache: карты, большие медиафайлы, и все HTML-документы.
+    // HTML страницы НЕ должны кэшироваться SW — иначе пользователь видит
+    // устаревший дизайн даже в инкогнито и после деплоя.
     exclude: [
       /\.map$/,
       /^manifest.*\.js$/,
       /\.mp4$/,
       /\.webm$/,
+      // Исключаем HTML-файлы из precache (функция получает { asset } — webpack asset)
+      ({ asset }) => asset.name && asset.name.endsWith('.html'),
+    ],
+
+    // Явные runtime caching правила.
+    // Document-запросы (HTML) — НЕ включаем, они уходят напрямую в сеть.
+    runtimeCaching: [
+      {
+        // _next/static — иммутабельны (хешированы), кэшируем навсегда
+        urlPattern: /^\/_next\/static\/.*/i,
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'static-assets',
+          expiration: {
+            maxEntries: 200,
+            maxAgeSeconds: 60 * 60 * 24 * 365,
+          },
+        },
+      },
+      {
+        // Изображения из /public
+        urlPattern: /\.(?:png|jpg|jpeg|svg|webp|avif|ico|gif)$/i,
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'images',
+          expiration: {
+            maxEntries: 100,
+            maxAgeSeconds: 60 * 60 * 24 * 7,
+          },
+        },
+      },
+      {
+        // Google Fonts
+        urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'google-fonts',
+          expiration: {
+            maxEntries: 20,
+            maxAgeSeconds: 60 * 60 * 24 * 365,
+          },
+        },
+      },
+      // HTML/навигация — НЕ добавляем. Все document-запросы идут в сеть напрямую.
     ],
   },
 })

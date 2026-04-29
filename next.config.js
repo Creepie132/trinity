@@ -138,6 +138,17 @@ const nextConfig = {
           { key: 'Cache-Control', value: 'no-store, no-cache' },
         ],
       },
+      {
+        // HTML страницы — НЕ кэшировать на Vercel Edge.
+        // Без этого заголовка Vercel может отдавать устаревший HTML
+        // анонимным пользователям (инкогнито, новый браузер).
+        // Исключаем: _next/*, api/*, файлы со статическим расширением.
+        source: '/((?!_next|api|.*\\..*$).*)',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+        ],
+      },
     ]
   },
 }

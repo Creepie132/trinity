@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { Inter, Assistant } from "next/font/google";
 import "./globals.css";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Toaster } from "@/components/ui/sonner";
@@ -149,39 +149,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Читаем куки и БД для определения локали пользователя
+  // Лендинг (/landing) изолирован через route group (marketing) — имеет свой layout.tsx
+  // и не попадает в этот root layout вообще.
   const cookieStore = await cookies();
-
-  // ── isLanding определяется ПЕРВЫМ — до любых DB-запросов ────────────────────
-  // Лендинг — статическая страница без auth. getUserPreferences() на /landing
-  // делал сетевой запрос к Supabase и при медленном ответе вызывал 504.
-  const hdrs = await headers();
-  const pathCandidates = [
-    hdrs.get('x-trinity-page') === 'landing' ? '/landing' : '',
-    hdrs.get('x-invoke-path') ?? '',
-    hdrs.get('next-url') ?? '',
-    hdrs.get('x-url') ?? '',
-    hdrs.get('x-pathname') ?? '',
-    hdrs.get('referer') ?? '',
-  ];
-  const isLandingByPath = pathCandidates.some(p => p.includes('/landing'));
-  const isLandingByCookie = cookieStore.get('trinity_page')?.value === 'landing';
-  const isLanding = isLandingByPath || isLandingByCookie;
-  if (isLanding) {
-    return (
-      <html lang="ru" dir="ltr" suppressHydrationWarning>
-        <head>
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-        </head>
-        <body style={{ margin: 0, padding: 0, background: '#080810', color: '#fff', fontFamily: "'Inter', sans-serif" }}>
-          {children}
-        </body>
-      </html>
-    );
-  }
-
-  // Для всех остальных страниц — определяем язык из cookie/БД
   const localeCookie = cookieStore.get('trinity_locale')?.value;
   let locale: 'he' | 'ru' = localeCookie === 'ru' ? 'ru' : 'he';
   try {
@@ -213,14 +184,6 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Trinity" />
-        {/*
-          Flash-prevention script удалён намеренно.
-          Ранее он читал localStorage и принудительно переключал lang/dir на клиенте,
-          что ломало синхронизацию между веб и PWA (localStorage не делится между ними).
-          Теперь SSR читает язык из БД (org_users.preferred_language) и отдаёт
-          правильные lang/dir с первого байта — никакого flash'а нет.
-          LanguageProvider синкает localStorage с SSR-значением при mount.
-        */}
         {/* JSON-LD Structured Data */}
         <script
           type="application/ld+json"

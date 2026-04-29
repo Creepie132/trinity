@@ -1,28 +1,11 @@
-'use client'
+﻿'use client'
 
 import { useEffect } from 'react'
 
 export default function LandingPage() {
   useEffect(() => {
-    // Страховка: root layout рендерит html с dir="rtl" и Rubik-шрифтом.
-    // Жёстко перезатираем на клиенте: удаляем все Trinity-классы, ставим LTR + Inter.
-    const html = document.documentElement
-    html.setAttribute('dir', 'ltr')
-    html.setAttribute('lang', 'ru')
-    html.classList.remove('font-assistant', 'light', 'dark')
-    html.classList.add('font-inter')
-    html.style.fontFamily = "'Inter', sans-serif"
-    html.style.direction = 'ltr'
-
-    document.body.style.fontFamily = "'Inter', sans-serif"
-    document.body.style.overflow = 'hidden'
-    document.body.style.background = '#080810'
-    document.body.style.direction = 'ltr'
-    // Удаляем классы Trinity-шрифтов с body
-    document.body.className = document.body.className
-      .split(' ')
-      .filter(c => !c.startsWith('__variable_') && c !== 'font-sans')
-      .join(' ')
+    // DOM-патч не нужен: (marketing)/layout.tsx уже объявляет
+    // <html lang="ru" dir="ltr"> — hydration совпадает с сервером.
 
     const mainScroll = document.getElementById('main-scroll')
     if (!mainScroll) return
@@ -92,12 +75,7 @@ export default function LandingPage() {
   return (
     <>
       <style>{`
-/* ============ LANDING RESET — ПРИНУДИТЕЛЬНО ИЗОЛИРУЕТ ОТ TRINITY ============ */
-html, html[dir="rtl"], html[lang="he"] {
-  direction: ltr !important;
-  font-family: 'Inter', sans-serif !important;
-  color: #fff !important;
-}
+/* Нет переопределений Trinity — layout уже изолирован через route group (marketing) */
 body {
   direction: ltr !important;
   font-family: 'Inter', sans-serif !important;

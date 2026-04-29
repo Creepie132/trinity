@@ -4283,3 +4283,29 @@ API `/api/payments` принимает `startDate`/`endDate` → фильтру�
 
 ### Commit
 `e667c05` — fix: search in AddServiceDialog (Apr 29, 2026)
+
+---
+
+## Fix: белый экран / старый дизайн в инкогнито (Apr 29, 2026)
+
+### Проблемы
+1. **Белый экран с вечной загрузкой** в основном браузере — залипший Service Worker держал устаревший кеш и блокировал загрузку новой версии.
+2. **Старый дизайн в инкогнито** — Vercel Edge кешировал HTML страницы и отдавал устаревшую версию анонимным пользователям.
+
+### Причина проблемы 2
+В `next.config.js` не было `Cache-Control` заголовка для HTML маршрутов. Vercel Edge по умолчанию мог кешировать ответы SSR без кук. При заходе в инкогнито пользователь получал закешированный старый HTML.
+
+### Решение
+Добавлен `Cache-Control: no-store, no-cache, must-revalidate` + `Pragma: no-cache` для всех HTML маршрутов (исключая `_next/*`, `api/*`, файлы со статическим расширением).
+
+Паттерн: `source: '/((?!_next|api|.*\\..*$).*)'`
+
+### Решение проблемы 1 (на стороне пользователя)
+- DevTools → Application → Service Workers → Unregister
+- Или `chrome://serviceworker-internals/` → Unregister для ambersol.co.il
+
+### Файлы
+- `next.config.js` — добавлен блок headers для HTML страниц
+
+### Commit
+`8f33186` — fix: no-store Cache-Control for HTML pages (Apr 29, 2026)

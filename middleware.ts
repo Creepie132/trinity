@@ -50,12 +50,13 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // Всегда пробрасываем pathname в request header — нужно root layout для надёжной идентификации /landing
+  // Корневой '/' тоже считается landing — он делает redirect('/landing') и не требует auth/DB.
   const baseHeaders = new Headers(req.headers)
   baseHeaders.set('x-pathname', pathname)
-  baseHeaders.set('x-trinity-page', pathname.startsWith('/landing') ? 'landing' : 'app')
+  baseHeaders.set('x-trinity-page', (pathname.startsWith('/landing') || pathname === '/') ? 'landing' : 'app')
 
   if (isPublicPath(pathname)) {
-    const isLanding = pathname === '/landing' || pathname.startsWith('/landing/')
+    const isLanding = pathname === '/landing' || pathname.startsWith('/landing/') || pathname === '/'
 
     const res = NextResponse.next({ request: { headers: baseHeaders } })
     if (isLanding) {

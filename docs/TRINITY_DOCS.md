@@ -4309,3 +4309,42 @@ API `/api/payments` принимает `startDate`/`endDate` → фильтру�
 
 ### Commit
 `8f33186` — fix: no-store Cache-Control for HTML pages (Apr 29, 2026)
+
+---
+
+## Fix: лендинг показывал старый дизайн — hydration mismatch #418 (Apr 30, 2026)
+
+### Проблема
+`/landing` показывал старый светлый дизайн Trinity вместо нового тёмного. Сервер отдавал правильный HTML (`<html lang="ru" dir="ltr">`), но React на клиенте при гидрации применял Trinity-атрибуты (`lang="he" dir="rtl" class="light"`), вызывая ошибку hydration mismatch #418.
+
+### Причина
+Root `layout.tsx` определял `isLanding` через `headers()` — это работает только при SSR. При гидрации React не имел доступа к этой информации и пытался применить стандартную ветку layout. Два разных HTML-дерева (сервер vs клиент) = #418. `suppressHydrationWarning` подавлял предупреждение, но не исправлял DOM.
+
+Предыдущий костыль (`useEffect` DOM-патч в `page.tsx`) работал только после гидрации — пользователь видел мигание старого дизайна перед исправлением.
+
+### Решение
+Перенос `/landing` в route group `(marketing)` с собственным независимым layout:
+
+```
+src/app/(marketing)/
+  layout.tsx          ← <html lang="ru" dir="ltr"> — жёстко, для всех marketing-страниц
+  landing/
+    layout.tsx        ← force-dynamic + revalidate=0
+    page.tsx          ← убран DOM-патч из useEffect, убран CSS-override блок
+  pricing/
+    page.tsx          ← унаследует (marketing)/layout.tsx
+```
+
+Next.js App Router использует **отдельное HTML-дерево для каждого route group**. Гидрация совпадает 100% — сервер и клиент оба получают `(marketing)/layout.tsx`, никаких headers() не нужно.
+
+Root `layout.tsx` упрощён: убран `isLanding` блок, убран импорт `headers`.
+
+### Файлы
+- `src/app/(marketing)/layout.tsx` — создан (новый HTML-контекст для лендинга)
+- `src/app/(marketing)/landing/layout.tsx` — создан (force-dynamic)
+- `src/app/(marketing)/landing/page.tsx` — перемещён из `src/app/landing/`, убран DOM-патч
+- `src/app/landing/` — удалён
+- `src/app/layout.tsx` — убран isLanding блок и импорт headers
+
+### Commit
+`2b9b60d` — fix: landing hydration mismatch via marketing route group (Apr 30, 2026)

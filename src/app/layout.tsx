@@ -1,7 +1,7 @@
 ﻿import type { Metadata } from "next";
 import { Inter, Assistant } from "next/font/google";
 import "./globals.css";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Toaster } from "@/components/ui/sonner";
@@ -149,9 +149,29 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Читаем куки и БД для определения локали пользователя
-  // Лендинг (/landing) изолирован через route group (marketing) — имеет свой layout.tsx
-  // и не попадает в этот root layout вообще.
+  // isLanding через headers() — единственный надёжный SSR-механизм.
+  // Для /landing возвращаем изолированный html без Trinity CSS.
+  // suppressHydrationWarning на <html> гарантирует что React не бросает#418
+  // при несовпадении атрибутов lang/dir между сервером и клиентом.
+  const hdrs = await headers();
+  const xPathname = hdrs.get('x-pathname') ?? '';
+  const isLanding = xPathname === '/landing' || xPathname.startsWith('/landing/');
+
+  if (isLanding) {
+    return (
+      <html lang="ru" dir="ltr" suppressHydrationWarning>
+        <head>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+        </head>
+        <body style={{ margin: 0, padding: 0, background: '#080810', color: '#fff', fontFamily: "'Inter', sans-serif", direction: 'ltr' }}>
+          {children}
+        </body>
+      </html>
+    );
+  }
+
   const cookieStore = await cookies();
   const localeCookie = cookieStore.get('trinity_locale')?.value;
   let locale: 'he' | 'ru' = localeCookie === 'ru' ? 'ru' : 'he';

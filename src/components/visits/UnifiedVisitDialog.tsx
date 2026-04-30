@@ -822,8 +822,9 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
               date: form.date, time: form.time,
               // Длительность всегда 60 минут
               duration:    60,
-              // Цена = override или subtotal, отдаётся как строка (API парсит parseFloat)
-              price:       String(cartTotal),
+              // Цена = только первая позиция (остальные → visit_services).
+              // ВАЖНО: НЕ передавать cartTotal — иначе доп. позиции учтутся дважды.
+              price:       String(firstItem!.unit_price * firstItem!.quantity),
               quantity:    firstItem!.quantity,
               notes,
               event_type:  'visit',

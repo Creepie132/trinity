@@ -63,6 +63,8 @@ export function ItemPickerSheet({
   const [customName, setCustomName] = useState('')
   const [customPrice, setCustomPrice] = useState('')
   const [mounted, setMounted] = useState(false)
+  // Защита от двойного тапа (особенно актуально на iPad/мобильных)
+  const [isAdding, setIsAdding] = useState(false)
 
   const { data: services = [], isLoading: svcLoading } = useServices()
   const { data: products = [] } = useQuery({
@@ -89,6 +91,7 @@ export function ItemPickerSheet({
         setStep('choose')
       }
       setSearch(''); setCustomName(''); setCustomPrice('')
+      setIsAdding(false)
     }
     // allowedTypes сознательно не в deps — читаем через замыкание,
     // сравниваем через стабильный allowedKey.
@@ -208,7 +211,10 @@ export function ItemPickerSheet({
                   return (
                     <button
                       key={String(s.id)}
+                      disabled={isAdding}
                       onClick={() => {
+                        if (isAdding) return
+                        setIsAdding(true)
                         onAdd({
                           type: 'service',
                           service_id: String(s.id),
@@ -219,7 +225,7 @@ export function ItemPickerSheet({
                         })
                         onClose()
                       }}
-                      className="w-full flex items-center justify-between p-3.5 rounded-xl bg-gray-50 hover:bg-violet-50 text-start"
+                      className="w-full flex items-center justify-between p-3.5 rounded-xl bg-gray-50 hover:bg-violet-50 text-start disabled:opacity-60"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
@@ -270,7 +276,10 @@ export function ItemPickerSheet({
                 ) : filteredProd.map(p => (
                   <button
                     key={p.id}
+                    disabled={isAdding}
                     onClick={() => {
+                      if (isAdding) return
+                      setIsAdding(true)
                       onAdd({
                         type: 'product',
                         product_id: p.id,
@@ -281,7 +290,7 @@ export function ItemPickerSheet({
                       })
                       onClose()
                     }}
-                    className="w-full flex items-center justify-between p-3.5 rounded-xl bg-gray-50 hover:bg-amber-50 text-start"
+                    className="w-full flex items-center justify-between p-3.5 rounded-xl bg-gray-50 hover:bg-amber-50 text-start disabled:opacity-60"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
@@ -327,18 +336,18 @@ export function ItemPickerSheet({
               </div>
               <button
                 onClick={() => {
-                  if (customName.trim()) {
-                    onAdd({
-                      type: 'custom',
-                      product_name: customName.trim(),
-                      quantity: 1,
-                      unit_price: Number(customPrice) || 0,
-                      duration_minutes: 0,
-                    })
-                    onClose()
-                  }
+                  if (!customName.trim() || isAdding) return
+                  setIsAdding(true)
+                  onAdd({
+                    type: 'custom',
+                    product_name: customName.trim(),
+                    quantity: 1,
+                    unit_price: Number(customPrice) || 0,
+                    duration_minutes: 0,
+                  })
+                  onClose()
                 }}
-                disabled={!customName.trim()}
+                disabled={!customName.trim() || isAdding}
                 className="w-full py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-40"
                 style={{
                   background: customName.trim()

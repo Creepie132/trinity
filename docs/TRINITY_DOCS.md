@@ -4502,3 +4502,49 @@ duration = durationOverride !== null
 
 ### Commit
 `cbc3038` — fix: visit dialog duration field (Apr 30, 2026)
+
+---
+
+## [Apr 30, 2026] Fix: двойной учёт суммы корзины + double-tap на iPad при создании визита
+
+### Проблема
+При создании визита через мульти-корзину (UnifiedVisitDialog):
+1. **Сумма задваивалась** — в UI итог показывал visits.price + visit_services суммарно, хотя visits.price уже содержала весь cartTotal
+2. **Дублирование услуг** — на iPad при выборе услуги в ItemPickerSheet тап срабатывал дважды, добавляя одну и ту же услугу в корзину двумя строками
+
+### Причина бага 1 (критический)
+В `UnifiedVisitDialog.tsx` в `createPayload`:
+```tsx
+// БЫЛО (неправильно):
+price: String(cartTotal),  // вся корзина — visits.price хранила сумму ВСЕХ позиций
+```
+Затем доп. позиции (restItems) писались в `visit_services` и при отображении суммировались поверх `visits.price`. Итог удваивался.
+
+### Причина бага 2 (iPad double-tap)
+В `ItemPickerSheet.tsx` не было защиты от повторного клика — touch-event на iPad мог срабатывать дважды за одно касание.
+
+### Исправления
+**UnifiedVisitDialog.tsx** — `createPayload.price`:
+```tsx
+// СТАЛО (правильно):
+price: String(firstItem!.unit_price * firstItem!.quantity),
+// visits.price = только первая позиция. Остальные → visit_services.
+```
+
+**ItemPickerSheet.tsx** — добавлен флаг `isAdding`:
+- `const [isAdding, setIsAdding] = useState(false)` — сбрасывается при каждом открытии (`isOpen` useEffect)
+- Все кнопки выбора (service, product, custom) получили `disabled={isAdding}` и guard `if (isAdding) return`
+- `setIsAdding(true)` вызывается до `onAdd()` — исключает любой повторный вызов
+
+### Архитектурное правило (задокументировать для будущего)
+`visits.price` = цена ТОЛЬКО первой (основной) позиции визита.
+`visit_services[].price` = цены доп. позиций.
+Итоговая сумма = visits.price + SUM(visit_services.price) — суммируется на уровне UI/запроса.
+Никогда не передавать cartTotal в visits.price при наличии доп. позиций.
+
+### Файлы
+- `src/components/visits/UnifiedVisitDialog.tsx`
+- `src/components/shared/ItemPickerSheet.tsx`
+
+### Commit
+`e27acca` — fix-visit-cart-price-and-double-tap (Apr 30, 2026)

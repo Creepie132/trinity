@@ -70,8 +70,31 @@ export async function setLocaleCookie(locale: string): Promise<void> {
 /**
  * getUserPreferences — читает предпочтения при старте сессии.
  * Используется в Server Components (layout.tsx).
+ *
+ * Impersonation: если суперадмин вошёл «как пользователь» (кука impersonate_org_id),
+ * возвращаем язык/тему целевой организации, а НЕ профиль суперадмина.
+ * Иначе язык всегда будет русский (язык суперадмина), даже у ивритоязычных клиентов.
  */
 export async function getUserPreferences(): Promise<UserPreferences> {
+  const cookieStore = await cookies()
+
+  // Проверяем impersonation mode
+  const impersonateOrgId = cookieStore.get('impersonate_org_id')?.value
+  if (impersonateOrgId) {
+    // Читаем настройки владельца (owner) импersonated организации
+    const { data } = await service
+      .from('org_users')
+      .select('theme, preferred_language')
+      .eq('org_id', impersonateOrgId)
+      .eq('role', 'owner')
+      .maybeSingle()
+
+    return {
+      theme:              data?.theme              ?? 'midnight',
+      preferred_language: data?.preferred_language ?? 'he',
+    }
+  }
+
   const userId = await getAuthenticatedUserId()
   if (!userId) return {}
 

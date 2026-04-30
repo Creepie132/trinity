@@ -60,7 +60,11 @@ export async function GET(request: NextRequest) {
 
     // Нормализуем: custom_title/image_url перекрывают данные товара
     const bestsellers = (data ?? []).map((row) => {
-      const p = row.product as Record<string, unknown> | null
+      // Supabase возвращает join как массив или объект — нормализуем оба случая
+      const rawProduct = row.product
+      const p: Record<string, unknown> | null = Array.isArray(rawProduct)
+        ? (rawProduct[0] ?? null)
+        : (rawProduct as Record<string, unknown> | null)
       return {
         position:    row.position,
         slot_id:     row.id,

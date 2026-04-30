@@ -1060,7 +1060,21 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <button type="button" onClick={() => updateItemQty(item.id, -1)}
                               className="w-6 h-6 rounded-md bg-gray-200 text-gray-500 text-xs font-bold flex items-center justify-center hover:bg-gray-300">−</button>
-                            <span className="w-5 text-center text-xs font-medium">{item.quantity}</span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={999}
+                              value={item.quantity}
+                              onChange={e => {
+                                const raw = e.target.value
+                                const n = Math.max(1, Math.min(999, parseInt(raw) || 1))
+                                setItems(prev => prev.map(i =>
+                                  i.id === item.id ? { ...i, quantity: n } : i
+                                ))
+                                setPriceOverride(null)
+                              }}
+                              className="w-10 h-6 text-center text-xs font-semibold border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-amber-400/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
                             <button type="button" onClick={() => updateItemQty(item.id, +1)}
                               className="w-6 h-6 rounded-md bg-gray-200 text-gray-500 text-xs font-bold flex items-center justify-center hover:bg-gray-300">+</button>
                           </div>

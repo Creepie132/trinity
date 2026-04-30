@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
 import {
   COOKIE_ORG_ID,
   COOKIE_ORG_NAME,
@@ -56,7 +57,48 @@ export async function startImpersonation(orgId: string, adminToken: string): Pro
 
 export async function stopImpersonation() {
   const cookieStore = await cookies()
+
+  try {
+    // Читаем текущую сессию через SSR-клиент (Supabase ищет куки сам по паттерну sb-*-auth-token)
+    const ssrClient = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll: () => cookieStore.getAll(),
+          setAll: () => {}, // read-only в server action
+        },
+      }
+    )
+
+    const { data: { user } } = await ssrClient.auth.getUser()
+
+    if (user?.id) {
+      // Находим реальную org пользователя
+      const { data: orgUser } = await service
+        .from('org_users')
+        .select('org_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (orgUser?.org_id) {
+        // Восстанавливаем user_active_branch на реальную org (не impersonated)
+        await service
+          .from('user_active_branch')
+          .upsert(
+            { user_id: user.id, active_org_id: orgUser.org_id },
+            { onConflict: 'user_id' }
+          )
+      }
+    }
+  } catch (e) {
+    // Некритично — главное удалить куки
+    console.error('[stopImpersonation] cleanup error:', e)
+  }
+
+  // Удаляем impersonation-куки
   cookieStore.delete(COOKIE_ORG_ID)
   cookieStore.delete(COOKIE_ORG_NAME)
+
   redirect('/admin')
 }

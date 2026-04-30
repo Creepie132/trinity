@@ -4392,3 +4392,22 @@ Root `layout.tsx` упрощён: убран `isLanding` блок, убран и
 
 ### Commit
 `cd23556` — fix_display_name_column (Apr 30, 2026)
+## [Apr 30, 2026] Impersonation fix #3 — service role клиент для данных при impersonation
+
+### Проблема
+В режиме impersonation баннер показывался корректно (кука работала), но данные (услуги, клиенты, платежи) не отображались. Например при создании визита — "Ничего не найдено" в выборе услуги.
+
+### Причина
+`getAuthContext()` при impersonation возвращал `supabase` = anon клиент с сессией суперадмина. RLS в Supabase работает по `auth.uid()`. Суперадмин не состоит в `org_users` клиентской организации → RLS блокировал все запросы к `services`, `clients`, `payments` и другим таблицам, даже при правильном `orgId`.
+
+### Исправление
+`src/lib/auth-helpers.ts` — при активной impersonation сессии возвращается `createSupabaseServiceClient()` вместо anon клиента. Service role обходит RLS полностью. Изоляция данных обеспечивается фильтром `.eq('org_id', orgId)` в каждом API route — как и всегда.
+
+### Безопасность
+Service role используется только при `isAdmin = true` + наличии HttpOnly куки `impersonate_org_id`. Обычные пользователи продолжают работать через anon клиент с RLS. Фильтрация по `org_id` обязательна в каждом route.
+
+### Файлы
+- `src/lib/auth-helpers.ts` — блок Safe Impersonation: supabase → serviceClient
+
+### Commit
+`957c622` — fix_impersonation_service_role_client (Apr 30, 2026)

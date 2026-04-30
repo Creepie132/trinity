@@ -24,9 +24,6 @@ import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ClientSearch } from '@/components/ui/ClientSearch'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranch } from '@/contexts/BranchContext'
@@ -100,14 +97,6 @@ const DEFAULT_SERVICES = [
   'haircut','coloring','smoothing','facial','manicure','pedicure',
   'haircutColoring','hairTreatment','consultation','meeting','advertising','other',
 ].map(v => ({ id: v, value: v, labelKey: `service.${v}` }))
-
-const DURATIONS = [
-  { value: 30, labelKey: 'duration.30min' },
-  { value: 45, labelKey: 'duration.45min' },
-  { value: 60, labelKey: 'duration.60min' },
-  { value: 90, labelKey: 'duration.90min' },
-  { value: 120, labelKey: 'duration.120min' },
-]
 
 const REMINDER_OPTIONS = [24, 12, 6, 3, 1]
 
@@ -449,8 +438,6 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
   const [items, setItems] = useState<VisitLineItem[]>([])
   // Ручной override общей суммы (скидка/наценка). null = считаем автоматически.
   const [priceOverride, setPriceOverride] = useState<number | null>(null)
-  // Ручной override длительности в минутах. null = авто из корзины (или 60 по умолчанию).
-  const [durationOverride, setDurationOverride] = useState<number | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
 
   // ── UI state ─────────────────────────────────────────────────────────────────
@@ -481,7 +468,6 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
     setItems([])
     initialItemsRef.current = []
     setPriceOverride(null)
-    setDurationOverride(null)
     setPickerOpen(false)
 
     if (sd.mode === 'edit' && sd.visit) {
@@ -661,12 +647,6 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
   const cartSubtotal = useMemo(() =>
     items.reduce((s, i) => s + i.quantity * i.unit_price, 0), [items])
 
-  // Длительность = сумма длительностей услуг × qty. Товары и custom не считаются.
-  const cartDuration = useMemo(() =>
-    items.reduce((s, i) =>
-      i.type === 'service' ? s + (i.duration_minutes * i.quantity) : s, 0
-    ), [items])
-
   // Финальная сумма: override или subtotal
   const cartTotal = priceOverride !== null ? priceOverride : cartSubtotal
 
@@ -840,8 +820,8 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
               service:     firstItem!.name,
               scheduledAt: new Date(`${form.date}T${form.time}`).toISOString(),
               date: form.date, time: form.time,
-              // Длительность визита = override или сумма длительностей. 60 минимум если одни товары.
-              duration:    durationOverride !== null ? durationOverride : (cartDuration > 0 ? cartDuration : 60),
+              // Длительность всегда 60 минут
+              duration:    60,
               // Цена = override или subtotal, отдаётся как строка (API парсит parseFloat)
               price:       String(cartTotal),
               quantity:    firstItem!.quantity,
@@ -934,7 +914,7 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
   }, [
     isEditMode, canSubmit, orgId, activeOrgId, form, isAppt, isHe, safeData,
     handleCloseAfterSuccess, queryClient, t,
-    hasMultiMode, items, cartTotal, cartDuration, durationOverride,
+    hasMultiMode, items, cartTotal,
   ])
 
   // ─── Mobile footer ────────────────────────────────────────────────────────────
@@ -1136,36 +1116,6 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
                     )}
                   </div>
                 )}
-                {items.length > 0 && cartDuration > 0 && durationOverride === null && (
-                  <p className="text-xs text-muted-foreground px-1">
-                    <Clock size={10} className="inline me-1 -mt-0.5" />
-                    {isHe ? 'משך' : 'Длительность'}: {cartDuration} {isHe ? "ד'" : 'мин'}
-                  </p>
-                )}
-
-                {/* Ручной ввод длительности (необязательно, default 60 мин) */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                    <Clock size={11} />{isHe ? 'משך (דקות)' : 'Длительность (мин)'}
-                    <span className="text-[10px] font-normal normal-case tracking-normal opacity-60">
-                      {isHe ? 'אופציונלי · ברירת מחדל 60' : 'необязательно · по умолч. 60'}
-                    </span>
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={600}
-                    value={durationOverride !== null ? durationOverride : ''}
-                    placeholder="60"
-                    onChange={e => {
-                      const raw = e.target.value
-                      if (raw === '') { setDurationOverride(null); return }
-                      const n = Math.max(1, Math.min(600, parseInt(raw) || 1))
-                      setDurationOverride(n)
-                    }}
-                    className="h-10 w-28 rounded-md border border-input bg-background px-3 text-sm font-semibold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                </div>
               </div>
             ) : (
               /* ─── Legacy single-service (edit-mode visit) ───────────────────── */
@@ -1256,26 +1206,6 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
             </div>
           </div>
 
-          {/* Длит + Цена (только для визита; в мульти-режиме — авто из корзины) */}
-          {!isAppt && !hasMultiMode && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('visits.duration')}</label>
-                <Select value={form.duration.toString()} onValueChange={v => setForm(p => ({ ...p, duration: parseInt(v) }))}>
-                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                  <SelectContent position="popper" side="bottom" avoidCollisions={false}>
-                    {DURATIONS.map(d => <SelectItem key={d.value} value={d.value.toString()}>{t(d.labelKey)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('visits.price')} *</label>
-                <Input type="number" value={form.price} placeholder="₪" className="h-10" disabled={isLoading}
-                  onChange={e => setForm(p => ({ ...p, price: e.target.value }))} />
-              </div>
-            </div>
-          )}
-
           {/* Напоминания WhatsApp (только create + встреча) */}
           {!isEditMode && isAppt && (
             <ReminderBlock hasWhatsapp={hasWhatsapp} value={form.reminderHours}
@@ -1305,7 +1235,6 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
                     <Scissors size={10} className="text-muted-foreground shrink-0 mt-0.5" />
                     <span>
                       {items.length} {isHe ? 'פריטים' : 'поз.'} — ₪{cartTotal.toFixed(2)}
-                      {cartDuration > 0 && ` · ${cartDuration} ${isHe ? "ד'" : 'мин'}`}
                     </span>
                   </div>
                 ) : (

@@ -270,7 +270,7 @@ function SlotCard({
 export default function BestsellersSettingsPage() {
   const router = useRouter()
   const { language } = useLanguage()
-  const { user, activeOrgId } = useAuth()
+  const { user, orgId: activeOrgId } = useAuth()
 
   const [slots, setSlots] = useState<BestsellerSlot[]>([])
   const [products, setProducts] = useState<Product[]>([])

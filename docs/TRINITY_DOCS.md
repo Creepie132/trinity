@@ -4571,3 +4571,51 @@ price: String(firstItem!.unit_price * firstItem!.quantity),
 
 ### Commit
 `184a75b` — fix: stopImpersonation resets user_active_branch to real org (Apr 30, 2026)
+
+---
+
+## Beautymania: Система бестселлеров карусели (Apr 30, 2026)
+
+### Что сделано
+Полноценная система управления каруселью "Наши бестселлеры" на beautymania.co.il через Trinity CRM.
+
+### БД
+Таблица `site_bestsellers`:
+- `org_id`, `position` (1-5), `product_id` (FK→products, nullable), `custom_title`, `custom_subtitle`, `image_url`, `is_active`
+- RLS: члены орга читают, owner/admin управляют
+- UNIQUE(org_id, position) — upsert по позиции
+- 5 пустых слотов для Beautymania созданы при миграции
+
+### Trinity API
+- `GET /api/beautymania/bestsellers` — публичный, для сайта. Возвращает только активные слоты с привязанным товаром. Нормализует: custom_title/image_url перекрывают данные товара. Cache: s-maxage=60.
+- `GET /api/beautymania/admin/bestsellers` — защищённый (getAuthContext), только org Beautymania. Все 5 слотов включая пустые.
+- `PUT /api/beautymania/admin/bestsellers` — upsert всех слотов по (org_id, position). Zod-валидация.
+
+### Trinity UI
+`/settings/bestsellers` — страница редактора:
+- 5 слотов с выбором товара (ProductPicker: поиск, превью, цена)
+- Кастомный заголовок и подпись для каждого слота
+- Переключатель активности слота
+- Кнопка "Сохранить и опубликовать" (активна только при изменениях)
+- Кнопка "Отменить" — сброс к последнему сохранённому
+- Ссылка на сайт для проверки
+- Карточка в settingsConfig.ts (секция Бизнес, иконка Star)
+
+### bm_site
+Карусель полностью переписана:
+- Удалён хардкод HTML-слайдов в index.html
+- main.js: fetch из `BESTSELLERS_API`, динамический рендер слайдов
+- **Бесконечный loop**: клон последнего слайда в начале, клон первого в конце. При попадании на клон — мгновенный прыжок на реальный слайд (без анимации). Пользователь не видит края.
+- Если API вернул 0 товаров — секция скрывается
+- Картинка товара из `image_url` (в будущем: кастомная загрузка)
+
+### Файлы
+- `src/app/api/beautymania/bestsellers/route.ts` (новый)
+- `src/app/api/beautymania/admin/bestsellers/route.ts` (новый)
+- `src/app/(dashboard)/settings/bestsellers/page.tsx` (новый)
+- `src/components/settings/settingsConfig.ts` (добавлена карточка)
+- `F:\Amber_solutions_Kira\bm_site\js\main.js` (карусель переписана)
+- Supabase migration: `create_site_bestsellers`
+
+### Следующий шаг
+Механика загрузки картинок для карусели (Анета сама загружает фото для каждого слота через Trinity).

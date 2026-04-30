@@ -1,7 +1,7 @@
-﻿import {
+import {
   Globe, Palette, Bell, Package, Building2, Users,
   Calendar, CreditCard, MessageSquare, FileText,
-  ShieldAlert, MessageCircle, ShoppingBag, Home, RefreshCw,
+  ShieldAlert, MessageCircle, ShoppingBag, Home, RefreshCw, Star,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -133,6 +133,16 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
         title_he: 'הגדרות מכירות',
         desc_ru: 'Автооплата, пересчёт сдачи и другие параметры',
         desc_he: 'תשלום אוטומטי, עודף ופרמטרים נוספים',
+      },
+      {
+        id: 'bestsellers',
+        href: '/settings/bestsellers',
+        icon: Star,
+        colorTint: 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400',
+        title_ru: 'Бестселлеры сайта',
+        title_he: 'בסטסלרים באתר',
+        desc_ru: 'Управляйте каруселью товаров на beautymania.co.il',
+        desc_he: 'נהל את קרוסלת המוצרים באתר beautymania.co.il',
       },
     ],
   },

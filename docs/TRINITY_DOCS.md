@@ -4548,3 +4548,26 @@ price: String(firstItem!.unit_price * firstItem!.quantity),
 
 ### Commit
 `e27acca` — fix-visit-cart-price-and-double-tap (Apr 30, 2026)
+
+---
+
+## Баг: stopImpersonation не возвращал данные суперадмина (Apr 30, 2026)
+
+### Симптом
+После нажатия "Завершить сеанс" в режиме просмотра организации — дашборд показывал данные просматриваемой org (Beautymania), а не реальные данные суперадмина.
+
+### Причина
+`stopImpersonation()` удалял только HttpOnly-куки (`impersonate_org_id`, `impersonate_org_name`), но НЕ сбрасывал запись `user_active_branch` в БД. При следующем запросе `getActiveOrgId()` читал из `user_active_branch` org_id Beautymania. Для суперадминов проверка принадлежности к филиалу пропускается — поэтому возвращался org_id чужой организации.
+
+### Исправление
+`src/actions/impersonation.ts` — `stopImpersonation()`:
+- Создаёт SSR Supabase-клиент (читает auth-сессию из cookies)
+- Находит реальную org суперадмина через `org_users`
+- Делает `upsert` в `user_active_branch` с реальным `org_id` перед удалением кук
+- Всё обёрнуто в try/catch — при любой ошибке куки всё равно удаляются
+
+### Файлы
+- `src/actions/impersonation.ts`
+
+### Commit
+`184a75b` — fix: stopImpersonation resets user_active_branch to real org (Apr 30, 2026)

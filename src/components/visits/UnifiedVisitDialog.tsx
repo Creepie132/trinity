@@ -291,7 +291,6 @@ function ServicePicker({ services, value, onChange, isHe, placeholder, disabled 
                     <span>{name}</span>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground flex-shrink-0">
                       {s.price != null && <span>₪{s.price}</span>}
-                      {s.duration_minutes && <span>{s.duration_minutes}{isHe ? "ד'" : 'м'}</span>}
                     </div>
                   </button>
                 )
@@ -450,6 +449,8 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
   const [items, setItems] = useState<VisitLineItem[]>([])
   // Ручной override общей суммы (скидка/наценка). null = считаем автоматически.
   const [priceOverride, setPriceOverride] = useState<number | null>(null)
+  // Ручной override длительности в минутах. null = авто из корзины (или 60 по умолчанию).
+  const [durationOverride, setDurationOverride] = useState<number | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
 
   // ── UI state ─────────────────────────────────────────────────────────────────
@@ -480,6 +481,7 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
     setItems([])
     initialItemsRef.current = []
     setPriceOverride(null)
+    setDurationOverride(null)
     setPickerOpen(false)
 
     if (sd.mode === 'edit' && sd.visit) {
@@ -838,8 +840,8 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
               service:     firstItem!.name,
               scheduledAt: new Date(`${form.date}T${form.time}`).toISOString(),
               date: form.date, time: form.time,
-              // Длительность визита = сумма длительностей всех услуг. 60 минимум если одни товары.
-              duration:    cartDuration > 0 ? cartDuration : 60,
+              // Длительность визита = override или сумма длительностей. 60 минимум если одни товары.
+              duration:    durationOverride !== null ? durationOverride : (cartDuration > 0 ? cartDuration : 60),
               // Цена = override или subtotal, отдаётся как строка (API парсит parseFloat)
               price:       String(cartTotal),
               quantity:    firstItem!.quantity,
@@ -932,7 +934,7 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
   }, [
     isEditMode, canSubmit, orgId, activeOrgId, form, isAppt, isHe, safeData,
     handleCloseAfterSuccess, queryClient, t,
-    hasMultiMode, items, cartTotal, cartDuration,
+    hasMultiMode, items, cartTotal, cartDuration, durationOverride,
   ])
 
   // ─── Mobile footer ────────────────────────────────────────────────────────────
@@ -1134,12 +1136,36 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
                     )}
                   </div>
                 )}
-                {items.length > 0 && cartDuration > 0 && (
+                {items.length > 0 && cartDuration > 0 && durationOverride === null && (
                   <p className="text-xs text-muted-foreground px-1">
                     <Clock size={10} className="inline me-1 -mt-0.5" />
                     {isHe ? 'משך' : 'Длительность'}: {cartDuration} {isHe ? "ד'" : 'мин'}
                   </p>
                 )}
+
+                {/* Ручной ввод длительности (необязательно, default 60 мин) */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                    <Clock size={11} />{isHe ? 'משך (דקות)' : 'Длительность (мин)'}
+                    <span className="text-[10px] font-normal normal-case tracking-normal opacity-60">
+                      {isHe ? 'אופציונלי · ברירת מחדל 60' : 'необязательно · по умолч. 60'}
+                    </span>
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={600}
+                    value={durationOverride !== null ? durationOverride : ''}
+                    placeholder="60"
+                    onChange={e => {
+                      const raw = e.target.value
+                      if (raw === '') { setDurationOverride(null); return }
+                      const n = Math.max(1, Math.min(600, parseInt(raw) || 1))
+                      setDurationOverride(n)
+                    }}
+                    className="h-10 w-28 rounded-md border border-input bg-background px-3 text-sm font-semibold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
               </div>
             ) : (
               /* ─── Legacy single-service (edit-mode visit) ───────────────────── */

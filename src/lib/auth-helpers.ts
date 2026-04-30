@@ -1,4 +1,4 @@
-import { createClient, Session, User, SupabaseClient } from "@supabase/supabase-js"
+﻿import { createClient, Session, User, SupabaseClient } from "@supabase/supabase-js"
 import { getActiveOrgId } from './get-active-org'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
@@ -124,13 +124,17 @@ export async function getAuthContext(request?: NextRequest): Promise<AuthContext
   if (isAdmin) {
     const impersonateOrgId = cookieStore.get(COOKIE_ORG_ID)?.value
     if (impersonateOrgId) {
+      // При impersonation используем service role клиент — он обходит RLS.
+      // Фильтрация по orgId гарантирует изоляцию данных между org.
+      // Anon клиент суперадмина не состоит в org клиента — RLS блокировал бы запросы.
+      const serviceClient = createSupabaseServiceClient()
       return {
         user,
         orgId: impersonateOrgId,   // подменённый org
         mainOrgId,                 // реальный org суперадмина
         orgRole,
         isAdmin,
-        supabase: supabase as unknown as SupabaseClient,
+        supabase: serviceClient as unknown as SupabaseClient,
       }
     }
   }

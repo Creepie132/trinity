@@ -4475,3 +4475,30 @@ Service role используется только при `isAdmin = true` + н�
 
 ### Commit
 `1fbeaba` — fix: ItemPickerSheet service search he+ru both fields nikud normalization (Apr 30, 2026)
+
+
+---
+
+## [Apr 30, 2026] Fix: окно создания визита — длительность
+
+### Изменения
+1. **Убрана длительность из ServicePicker** — в выпадающем списке услуг больше не отображается время (только цена ₪). Длительность услуги была избыточной информацией при выборе.
+
+2. **Поле ручного ввода длительности** — в окне создания визита (create-режим, блок позиций) добавлено необязательное поле «Длительность (мин)» / «משך (דקות)»:
+   - Тип: `number`, мин 1, макс 600
+   - По умолчанию пустое → визит создаётся с длительностью 60 мин (или авто из корзины услуг)
+   - При заполнении → введённое значение overrides авто-длительность из корзины
+   - State: `durationOverride: number | null` — сбрасывается при каждом открытии диалога
+
+### Логика submit
+```
+duration = durationOverride !== null
+  ? durationOverride
+  : (cartDuration > 0 ? cartDuration : 60)
+```
+
+### Файлы
+- `src/components/visits/UnifiedVisitDialog.tsx`
+
+### Commit
+`cbc3038` — fix: visit dialog duration field (Apr 30, 2026)

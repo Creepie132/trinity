@@ -104,10 +104,26 @@ export function ItemPickerSheet({
     custom:  isHe ? 'פריט חופשי' : 'Произвольная позиция',
   }
 
+  // Нормализация для поиска: удаляем bidi-маркеры, никкуд, trim, lowercase
+  const normalizeForSearch = (str: unknown): string => {
+    if (!str) return ''
+    return String(str)
+      // bidi-маркеры (RTL/LTR, иврит/арабский)
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069\u180E]/g, '')
+      // никкуд и кантилляция иврита (огласовки, дагеш и т.д.)
+      .replace(/[\u0591-\u05C7]/g, '')
+      .trim()
+      .toLowerCase()
+  }
+
   const filteredSvc = (services as unknown as Array<Record<string, unknown>>).filter(s => {
     if (!search) return true
-    const name = String(s.name_ru || s.name || '')
-    return name.toLowerCase().includes(search.toLowerCase())
+    const q = normalizeForSearch(search)
+    // Ищем по обоим полям (иврит + русский) — чтобы поиск работал на любом языке интерфейса
+    const nameHe = normalizeForSearch(s.name)
+    const nameRu = normalizeForSearch(s.name_ru)
+    return nameHe.includes(q) || nameRu.includes(q)
   })
   const filteredProd = products.filter(p =>
     !search || p.name.toLowerCase().includes(search.toLowerCase()))

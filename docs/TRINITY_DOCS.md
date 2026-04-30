@@ -4434,3 +4434,22 @@ Service role используется только при `isAdmin = true` + н�
 
 ### Commit
 `0e04099` — fix: service search Hebrew IME nikud (Apr 30, 2026)
+
+## [Apr 30, 2026] Fix: поиск услуг в ItemPickerSheet (הוסף פריט → שירות)
+
+### Проблема
+При создании визита → «הוסף פריט» → «שירות» — при вводе ивритского текста в строке поиска услуги не отображались ("לא נמצא"). Баг был в компоненте `ItemPickerSheet`, не в `AddServiceDialog`.
+
+### Причина
+Фильтрация в `ItemPickerSheet` искала только по `name_ru || name` — при ивритском интерфейсе брался `name_ru` (русское имя), а пользователь вводил иврит. Совпадений не было. Также не было нормализации никкуда и bidi-маркеров.
+
+### Исправление (`ItemPickerSheet.tsx`)
+- Добавлена `normalizeForSearch()` — удаляет bidi-маркеры (U+200E/F, U+202A-E, U+2066-9), никкуд (U+0591-U+05C7), trim, toLowerCase
+- `filteredSvc` теперь ищет по обоим полям: `s.name` (иврит) И `s.name_ru` (русский)
+- Поиск работает на любом языке интерфейса
+
+### Файлы
+- `src/components/shared/ItemPickerSheet.tsx`
+
+### Commit
+`1fbeaba` — fix: ItemPickerSheet service search he+ru both fields nikud normalization (Apr 30, 2026)

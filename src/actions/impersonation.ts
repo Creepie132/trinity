@@ -1,4 +1,4 @@
-'use server'
+﻿'use server'
 
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -17,15 +17,7 @@ const service = createClient(
 
 const SUPER_ADMINS = ['ambersolutions.systems@gmail.com', 'creepie1357@gmail.com']
 
-/**
- * startImpersonation — устанавливает HttpOnly куки.
- * НЕ меняет сессию Supabase и НЕ меняет user_active_branch в БД.
- *
- * ВАЖНО: service.auth.getUser(token) работает только с anon ключом,
- * но для запросов к БД нам нужен service role — используем два клиента.
- */
 export async function startImpersonation(orgId: string, adminToken: string): Promise<{ error?: string }> {
-  // Верифицируем токен через anon клиент (service role не умеет getUser)
   const anonClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -34,19 +26,18 @@ export async function startImpersonation(orgId: string, adminToken: string): Pro
   if (authErr || !user) return { error: 'Unauthorized' }
   if (!SUPER_ADMINS.includes(user.email || '')) return { error: 'Forbidden' }
 
-  // Запрос к БД — через service role (обходит RLS)
   const { data: org, error: orgErr } = await service
     .from('organizations')
-    .select('id, name, display_name')
+    .select('id, name')
     .eq('id', orgId)
     .single()
 
   if (orgErr || !org) {
-    console.error('[startImpersonation] Org not found:', { orgId, orgErr: orgErr?.message })
+    console.error('[startImpersonation] Org not found:', orgId, orgErr?.message)
     return { error: 'Org not found: ' + (orgErr?.message || 'no data') }
   }
 
-  const orgName = (org.display_name || org.name) as string
+  const orgName = org.name as string
 
   try {
     await service.from('audit_log').insert({
@@ -54,7 +45,7 @@ export async function startImpersonation(orgId: string, adminToken: string): Pro
       action: 'impersonation_start', entity_type: 'impersonation',
       metadata: { org_name: orgName, method: 'safe_cookie' },
     })
-  } catch { /* некритично */ }
+  } catch {}
 
   const cookieStore = await cookies()
   cookieStore.set(COOKIE_ORG_ID,   orgId,   IMPERSONATE_COOKIE_OPTIONS)
@@ -63,9 +54,6 @@ export async function startImpersonation(orgId: string, adminToken: string): Pro
   return {}
 }
 
-/**
- * stopImpersonation — удаляет куки и редиректит в /admin.
- */
 export async function stopImpersonation() {
   const cookieStore = await cookies()
   cookieStore.delete(COOKIE_ORG_ID)

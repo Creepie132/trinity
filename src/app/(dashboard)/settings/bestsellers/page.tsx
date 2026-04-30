@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Star, Package, X, ChevronDown, Loader2, Save, Eye, RotateCcw } from 'lucide-react'
+import { ArrowRight, Star, Package, X, ChevronDown, Loader2, Save, Eye, RotateCcw, Upload, ImageIcon, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
@@ -33,9 +33,7 @@ interface BestsellerSlot {
 // ─── ProductPicker ────────────────────────────────────────────────────────────
 
 function ProductPicker({
-  products,
-  value,
-  onChange,
+  products, value, onChange,
 }: {
   products: Product[]
   value: string | null
@@ -43,7 +41,6 @@ function ProductPicker({
 }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
-
   const selected = products.find((p) => p.id === value)
   const filtered = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -98,7 +95,6 @@ function ProductPicker({
             />
           </div>
           <div className="max-h-52 overflow-y-auto">
-            {/* Очистить слот */}
             <button
               type="button"
               onClick={() => { onChange(null); setOpen(false); setSearch('') }}
@@ -144,13 +140,143 @@ function ProductPicker({
   )
 }
 
+// ─── ImageUploader ────────────────────────────────────────────────────────────
+
+function ImageUploader({
+  value,
+  onChange,
+  slotIndex,
+}: {
+  value: string | null
+  onChange: (url: string | null) => void
+  slotIndex: number
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+
+  const handleFile = async (file: File) => {
+    if (!file) return
+    if (!['image/png', 'image/webp'].includes(file.type)) {
+      toast.error('Только PNG или WebP (для прозрачного фона)')
+      return
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error('Файл слишком большой (макс. 8 МБ)')
+      return
+    }
+
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/beautymania/admin/bestsellers/upload', {
+        method: 'POST',
+        body: fd,
+      })
+      const data = await res.json() as { url?: string; error?: string }
+      if (!res.ok || !data.url) throw new Error(data.error ?? 'Upload failed')
+      onChange(data.url)
+      toast.success('Фото загружено')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Ошибка загрузки')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleFile(file)
+  }
+
+  return (
+    <div className="mt-3">
+      <p className="text-xs mb-1.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+        Фото слота (PNG/WebP с прозрачным фоном)
+      </p>
+
+      {value ? (
+        // Превью загруженного фото
+        <div
+          className="relative rounded-xl overflow-hidden flex items-center justify-center"
+          style={{
+            height: 140,
+            background: 'repeating-conic-gradient(rgba(255,255,255,0.05) 0% 25%, transparent 0% 50%) 0 0 / 16px 16px',
+            border: '1px solid rgba(255,255,255,0.1)',
+          }}
+        >
+          <img
+            src={value}
+            alt={`Слот ${slotIndex + 1}`}
+            className="max-h-full max-w-full object-contain"
+            style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))' }}
+          />
+          <div className="absolute top-2 right-2 flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:scale-105"
+              style={{ background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.15)' }}
+              title="Заменить фото"
+            >
+              <Upload className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.7)' }} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange(null)}
+              className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:scale-105"
+              style={{ background: 'rgba(220,38,38,0.7)', border: '1px solid rgba(220,38,38,0.4)' }}
+              title="Удалить фото"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-white" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        // Зона дропа
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          onClick={() => !uploading && inputRef.current?.click()}
+          className="rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all"
+          style={{
+            height: 100,
+            border: `2px dashed ${dragOver ? '#c9a84c' : 'rgba(255,255,255,0.12)'}`,
+            background: dragOver ? 'rgba(201,168,76,0.06)' : 'rgba(255,255,255,0.02)',
+          }}
+        >
+          {uploading ? (
+            <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#c9a84c' }} />
+          ) : (
+            <>
+              <ImageIcon className="w-5 h-5" style={{ color: 'rgba(255,255,255,0.2)' }} />
+              <span className="text-xs text-center px-4" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                Перетащите PNG/WebP или нажмите для выбора
+              </span>
+            </>
+          )}
+        </div>
+      )}
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/webp"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
+      />
+    </div>
+  )
+}
+
 // ─── SlotCard ─────────────────────────────────────────────────────────────────
 
 function SlotCard({
-  slot,
-  index,
-  products,
-  onChange,
+  slot, index, products, onChange,
 }: {
   slot: BestsellerSlot
   index: number
@@ -182,7 +308,6 @@ function SlotCard({
           Слот {index + 1}
         </span>
         <div className="flex-1" />
-        {/* Переключатель активности */}
         <button
           type="button"
           onClick={() => onChange({ ...slot, is_active: !slot.is_active })}
@@ -204,7 +329,7 @@ function SlotCard({
         onChange={(id) => onChange({ ...slot, product_id: id })}
       />
 
-      {/* Preview если товар выбран */}
+      {/* Превью товара */}
       {product && (
         <div className="mt-3 flex items-center gap-3 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)' }}>
           {product.image_url ? (
@@ -230,7 +355,16 @@ function SlotCard({
         </div>
       )}
 
-      {/* Кастомный заголовок (опционально) */}
+      {/* Загрузка кастомного фото */}
+      {slot.product_id && (
+        <ImageUploader
+          value={slot.image_url}
+          onChange={(url) => onChange({ ...slot, image_url: url })}
+          slotIndex={index}
+        />
+      )}
+
+      {/* Кастомные тексты */}
       {slot.product_id && (
         <div className="mt-3 space-y-2">
           <input
@@ -278,8 +412,11 @@ export default function BestsellersSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
 
-  // Только Beautymania может видеть эту страницу
-  const isBeautymania = activeOrgId === BM_ORG_ID
+  // Beautymania-only: проверяем и активный org, и org пользователя
+  // (при impersonation activeOrgId = org Beautymania, иначе = org текущего юзера)
+  const isBeautymania =
+    activeOrgId === BM_ORG_ID ||
+    (user as { org_id?: string } | null)?.org_id === BM_ORG_ID
 
   const loadData = useCallback(async () => {
     if (!isBeautymania) { setLoading(false); return }
@@ -292,10 +429,16 @@ export default function BestsellersSettingsPage() {
 
       if (slotsRes.ok) {
         const { slots: rawSlots } = await slotsRes.json() as { slots: BestsellerSlot[] }
-        // Гарантируем 5 слотов
         const filled: BestsellerSlot[] = Array.from({ length: 5 }, (_, i) => {
           const found = rawSlots.find((s) => s.position === i + 1)
-          return found ?? { position: i + 1, product_id: null, custom_title: null, custom_subtitle: null, image_url: null, is_active: true }
+          return found ?? {
+            position: i + 1,
+            product_id: null,
+            custom_title: null,
+            custom_subtitle: null,
+            image_url: null,
+            is_active: true,
+          }
         })
         setSlots(filled)
       }
@@ -342,7 +485,6 @@ export default function BestsellersSettingsPage() {
     await loadData()
   }
 
-  // ─── Not Beautymania ──────────────────────────────────────────────────────
   if (!isBeautymania && !loading) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8">
@@ -359,10 +501,17 @@ export default function BestsellersSettingsPage() {
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6">
-        <button onClick={() => router.push('/settings')} className="text-sm hover:opacity-80 transition-opacity" style={{ color: 'rgba(255,255,255,0.45)' }}>
+        <button
+          onClick={() => router.push('/settings')}
+          className="text-sm hover:opacity-80 transition-opacity"
+          style={{ color: 'rgba(255,255,255,0.45)' }}
+        >
           {language === 'he' ? 'הגדרות' : 'Настройки'}
         </button>
-        <ArrowRight className="w-3.5 h-3.5 opacity-30" style={{ transform: language === 'he' ? 'scaleX(-1)' : undefined }} />
+        <ArrowRight
+          className="w-3.5 h-3.5 opacity-30"
+          style={{ transform: language === 'he' ? 'scaleX(-1)' : undefined }}
+        />
         <span className="text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>Бестселлеры сайта</span>
       </div>
 
@@ -377,7 +526,7 @@ export default function BestsellersSettingsPage() {
           </h1>
         </div>
         <p className="text-sm ml-12" style={{ color: 'rgba(255,255,255,0.4)' }}>
-          Выберите до 5 товаров для карусели на beautymania.co.il. Изменения публикуются сразу после сохранения.
+          Выберите до 5 товаров для карусели на beautymania.co.il. Загрузите PNG с прозрачным фоном для каждого слота.
         </p>
       </div>
 
@@ -388,7 +537,6 @@ export default function BestsellersSettingsPage() {
         </div>
       ) : (
         <>
-          {/* Slots */}
           <div className="space-y-3 mb-6">
             {slots.map((slot, i) => (
               <SlotCard
@@ -401,12 +549,10 @@ export default function BestsellersSettingsPage() {
             ))}
           </div>
 
-          {/* Info */}
           <div className="mb-6 px-4 py-3 rounded-xl text-sm" style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)', color: 'rgba(255,255,255,0.5)' }}>
-            💡 Слоты без товара не показываются на сайте. Пустые слоты можно оставить — карусель покажет только заполненные.
+            💡 Загружайте PNG с прозрачным фоном — именно они красиво накладываются на тёмный фон карусели. Используйте <strong style={{ color: 'rgba(255,255,255,0.7)' }}>remove.bg</strong> для быстрого удаления фона.
           </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-3">
             <Button
               onClick={handleSave}

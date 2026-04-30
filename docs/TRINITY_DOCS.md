@@ -4435,6 +4435,28 @@ Service role используется только при `isAdmin = true` + н�
 ### Commit
 `0e04099` — fix: service search Hebrew IME nikud (Apr 30, 2026)
 
+## [Apr 30, 2026] Fix: impersonation — язык из org целевого клиента
+
+### Проблема
+При входе «как пользователь» (режим просмотра за клиента) система отображалась на языке суперадмина (русский), даже если у клиента (например, Ксении) установлен иврит.
+
+### Причина
+`getUserPreferences()` в `user-preferences.ts` читала язык по `user_id` суперадмина из cookies — а не из профиля org целевого клиента. Impersonation работает через куку `impersonate_org_id` без смены Supabase-сессии.
+
+### Исправление (`src/actions/user-preferences.ts`)
+- `getUserPreferences()` теперь первым делом проверяет куку `impersonate_org_id`
+- Если impersonation активен — читает `theme` и `preferred_language` из `org_users` WHERE `org_id = impersonateOrgId AND role = 'owner'`
+- Fallback при пустой записи: `preferred_language = 'he'` (большинство клиентов)
+- Обычный путь (не impersonation) не затронут
+
+### Файлы
+- `src/actions/user-preferences.ts`
+
+### Commit
+`0d7c7f2` — fix-impersonation-language (Apr 30, 2026)
+
+---
+
 ## [Apr 30, 2026] Fix: поиск услуг в ItemPickerSheet (הוסף פריט → שירות)
 
 ### Проблема

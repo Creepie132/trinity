@@ -1,4 +1,4 @@
-# Trinity CRM — Полная документация
+﻿# Trinity CRM — Полная документация
 
 > Amber Solutions · [ambersol.co.il](http://ambersol.co.il) · Последнее обновление: 20.04.2026
 
@@ -4348,3 +4348,37 @@ Root `layout.tsx` упрощён: убран `isLanding` блок, убран и
 
 ### Commit
 `2b9b60d` — fix: landing hydration mismatch via marketing route group (Apr 30, 2026)
+
+## [Apr 30, 2026] Impersonation fix — HttpOnly cookie через Server Action
+
+### Проблема
+При нажатии "Войти как пользователь" данные (услуги, платежи, клиенты, товары) не переключались.
+Корень: `handleImpersonate` в `admin/page.tsx` никогда не устанавливал HttpOnly куку `impersonate_org_id`.
+Вместо этого писал в `user_active_branch` (set-active-org) + клиентский cookie + localStorage.
+`getAuthContext()` на сервере ищет только HttpOnly куку — её не было → orgId оставался суперадминовским.
+
+### Архитектура (правильная)
+1. `startImpersonation(orgId, token)` — Server Action (src/actions/impersonation.ts)
+   - Проверяет token → isAdmin → SUPER_ADMINS
+   - Пишет audit_log
+   - Устанавливает HttpOnly куки: `impersonate_org_id` + `impersonate_org_name` (8ч)
+2. `getAuthContext()` — читает куку, подменяет orgId для ВСЕХ API роутов
+3. `ImpersonationBanner` — читает /api/admin/impersonation-state (HttpOnly-safe)
+4. `stopImpersonation()` — Server Action, удаляет куки + redirect /admin
+
+### Что исправлено
+- `src/app/admin/page.tsx`: `handleImpersonate` теперь вызывает `startImpersonation()` вместо 5-шагового flow с localStorage/set-active-org. Убраны fetch к /api/admin/impersonate, /api/admin/set-active-org, document.cookie хак, localStorage записи.
+- `src/hooks/useIsImpersonating.ts`: переключён с localStorage на /api/admin/impersonation-state — теперь синхронизирован с реальным HttpOnly состоянием.
+
+### Файлы
+- `src/app/admin/page.tsx` — handleImpersonate упрощён до 3 строк
+- `src/hooks/useIsImpersonating.ts` — убран localStorage, читает API
+- (не изменялись) `src/actions/impersonation.ts`, `src/lib/auth-helpers.ts`, `src/components/admin/ImpersonationBanner.tsx`
+
+### Безопасность
+- Только `is_admin=true` в JWT + email в SUPER_ADMINS
+- HttpOnly кука — клиент не может подделать
+- Audit log при каждом входе под пользователем
+
+### Commit
+`2452631` — fix_impersonation (Apr 30, 2026)

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useServices } from '@/hooks/useServices';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -21,13 +21,20 @@ interface AddServiceDialogProps {
  * Нормализует строку для поиска:
  * — trim пробелов
  * — удаляет невидимые Unicode bidi-маркеры (иврит/арабский RTL)
+ * — удаляет никкуд (ивритские огласовки U+0591–U+05C7) — без них поиск
+ *   работает независимо от того, есть ли огласовки в БД или в запросе
  * — lower case
  */
 function normalizeForSearch(str: string | null | undefined): string {
   if (!str) return '';
-  // Удаляем Unicode bidi-маркеры: LRM, RLM, LRE, RLE, PDF, LRO, RLO и Mongolian vowel separator
-  // eslint-disable-next-line no-control-regex
-  return str.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069\u180E]/g, '').trim().toLowerCase();
+  return str
+    // bidi-маркеры: LRM, RLM, LRE, RLE, PDF, LRO, RLO, FSI, PDI и Mongolian vowel separator
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069\u180E]/g, '')
+    // никкуд и кантилляция иврита (огласовки, знаки дагеш и т.д.)
+    .replace(/[\u0591-\u05C7]/g, '')
+    .trim()
+    .toLowerCase();
 }
 
 export function AddServiceDialog({
@@ -39,8 +46,11 @@ export function AddServiceDialog({
   const { t, language } = useLanguage();
   const { data: services, isLoading } = useServices();
   const [searchQuery, setSearchQuery] = useState('');
+  // IME composition flag — мобильный иврит/арабский вводит символы через IME.
+  // Пока composing=true, onChange даёт промежуточные значения — не передаём в debounce.
+  const isComposing = useRef(false);
 
-  // Debounce: снижаем нагрузку при быстром вводе (особенно иврит IME)
+  // Debounce только после завершения IME-композиции
   const debouncedQuery = useDebounce(searchQuery, 200);
 
   const filteredServices = useMemo(() => {
@@ -97,10 +107,23 @@ export function AddServiceDialog({
             />
             <Input
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                // Во время IME-композиции не обновляем state —
+                // финальное значение придёт через onCompositionEnd
+                if (!isComposing.current) {
+                  setSearchQuery(e.target.value);
+                }
+              }}
+              onCompositionStart={() => {
+                isComposing.current = true;
+              }}
+              onCompositionEnd={(e) => {
+                isComposing.current = false;
+                // Берём финальное значение после завершения IME
+                setSearchQuery((e.target as HTMLInputElement).value);
+              }}
               placeholder={language === 'he' ? 'חיפוש שירות...' : 'Поиск услуги...'}
               dir={dir}
-              lang={language === 'he' ? 'he' : 'ru'}
               className={dir === 'rtl' ? 'pr-10 text-right' : 'pl-10 text-left'}
             />
           </div>

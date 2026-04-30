@@ -4382,3 +4382,13 @@ Root `layout.tsx` упрощён: убран `isLanding` блок, убран и
 
 ### Commit
 `2452631` — fix_impersonation (Apr 30, 2026)
+## [Apr 30, 2026] Impersonation fix #2 — убран несуществующий столбец display_name
+
+### Проблема
+Ошибка `column organizations.display_name does not exist` — в таблице `organizations` нет поля `display_name`, оно было добавлено в SELECT по ошибке.
+
+### Исправление
+`src/actions/impersonation.ts` — SELECT изменён с `id, name, display_name` на просто `id, name`. Имя организации берётся из `org.name`.
+
+### Commit
+`cd23556` — fix_display_name_column (Apr 30, 2026)

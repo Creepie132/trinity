@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -21,6 +21,7 @@ import { format, formatDistanceToNow } from 'date-fns'
 import { he } from 'date-fns/locale'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { supabase } from '@/lib/supabase'
+import { startImpersonation } from '@/actions/impersonation'
 import { cn } from '@/lib/utils'
 
 // ── Animated number ───────────────────────────────────────────────────────────
@@ -137,48 +138,21 @@ function ImpersonateModal({ onClose }: { onClose: () => void }) {
     o.email.toLowerCase().includes(search.toLowerCase())
   )
 
-  const handleImpersonate = async (orgId: string, orgName: string) => {
+  const handleImpersonate = async (orgId: string, _orgName: string) => {
     setDoing(orgId)
     try {
       const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('No session')
 
-      // ШАГ 1: Читаем ТЕКУЩИЙ activeOrgId ДО любых переключений — это admin_org_id для возврата
-      let adminOrgId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' // fallback
-      try {
-        const branchRes = await fetch('/api/user/active-branch')
-        if (branchRes.ok) {
-          const branchData = await branchRes.json()
-          if (branchData.activeOrgId) adminOrgId = branchData.activeOrgId
-        }
-      } catch {}
-
-      // ШАГ 2: Записываем audit log
-      await fetch('/api/admin/impersonate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ orgId }),
-      })
-
-      // ШАГ 3: Переключаем activeOrgId через admin endpoint (без проверки филиалов)
-      const switchRes = await fetch('/api/admin/set-active-org', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ orgId }),
-      })
-      if (!switchRes.ok) throw new Error('Failed to switch org')
-
-      // ШАГ 4: Принудительно обновляем cookie на клиенте (чтобы браузер не читал старый)
-      document.cookie = `trinity_active_branch=${orgId}; path=/; max-age=${60 * 60 * 24}; samesite=lax`
-
-      // ШАГ 5: Сохраняем состояние для ImpersonationBanner
-      localStorage.setItem('admin_org_id', adminOrgId)
-      localStorage.setItem('impersonation_session', JSON.stringify({
-        orgId, orgName, adminEmail: session?.user?.email, startedAt: new Date().toISOString()
-      }))
+      // Server Action: устанавливает HttpOnly куку impersonate_org_id + impersonate_org_name
+      // + пишет audit_log. НЕ трогает user_active_branch и НЕ меняет сессию Supabase.
+      // getAuthContext() на сервере читает куку и подменяет orgId для всех API роутов.
+      const result = await startImpersonation(orgId, session.access_token)
+      if (result.error) throw new Error(result.error)
 
       window.location.href = '/dashboard'
-    } catch {
-      alert('שגיאה בכניסה')
+    } catch (e: any) {
+      alert('שגיאה בכניסה: ' + (e.message || 'unknown'))
     } finally {
       setDoing(null)
     }

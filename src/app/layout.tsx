@@ -149,13 +149,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // isLanding через headers() — единственный надёжный SSR-механизм.
-  // Для /landing возвращаем изолированный html без Trinity CSS.
-  // suppressHydrationWarning на <html> гарантирует что React не бросает#418
-  // при несовпадении атрибутов lang/dir между сервером и клиентом.
-  const hdrs = await headers();
-  const xPathname = hdrs.get('x-pathname') ?? '';
-  const isLanding = xPathname === '/landing' || xPathname.startsWith('/landing/');
+  // isLanding определяется через cookie trinity_page=landing, которую middleware
+  // устанавливает при запросе /landing. Куки надёжнее чем headers() в Vercel Edge.
+  const cookieStore = await cookies();
+  const trinityPage = cookieStore.get('trinity_page')?.value;
+  const isLanding = trinityPage === 'landing';
 
   if (isLanding) {
     return (
@@ -171,8 +169,6 @@ export default async function RootLayout({
       </html>
     );
   }
-
-  const cookieStore = await cookies();
   const localeCookie = cookieStore.get('trinity_locale')?.value;
   let locale: 'he' | 'ru' = localeCookie === 'ru' ? 'ru' : 'he';
   try {

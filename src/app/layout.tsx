@@ -172,7 +172,13 @@ export default async function RootLayout({
   const localeCookie = cookieStore.get('trinity_locale')?.value;
   let locale: 'he' | 'ru' = localeCookie === 'ru' ? 'ru' : 'he';
   try {
-    const prefs = await getUserPreferences();
+    // Если текущий маршрут — /admin, игнорируем impersonation:
+    // язык панели администратора всегда принадлежит самому суперадмину,
+    // а не организации, которую он просматривает.
+    const headersList = await headers();
+    const pathname = headersList.get('x-pathname') ?? headersList.get('x-invoke-path') ?? '';
+    const isAdminRoute = pathname.startsWith('/admin');
+    const prefs = await getUserPreferences(isAdminRoute);
     if (prefs.preferred_language === 'ru' || prefs.preferred_language === 'he') {
       locale = prefs.preferred_language;
       if (localeCookie !== locale) {

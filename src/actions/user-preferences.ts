@@ -74,12 +74,18 @@ export async function setLocaleCookie(locale: string): Promise<void> {
  * Impersonation: если суперадмин вошёл «как пользователь» (кука impersonate_org_id),
  * возвращаем язык/тему целевой организации, а НЕ профиль суперадмина.
  * Иначе язык всегда будет русский (язык суперадмина), даже у ивритоязычных клиентов.
+ *
+ * @param ignoreImpersonation — если true, всегда берём язык реального вошедшего
+ *   пользователя (суперадмина), игнорируя impersonation. Используется в /admin layout
+ *   чтобы не переводить саму панель администратора на язык просматриваемой организации.
  */
-export async function getUserPreferences(): Promise<UserPreferences> {
+export async function getUserPreferences(ignoreImpersonation = false): Promise<UserPreferences> {
   const cookieStore = await cookies()
 
-  // Проверяем impersonation mode
-  const impersonateOrgId = cookieStore.get('impersonate_org_id')?.value
+  // Проверяем impersonation mode — только если не запрошено игнорирование
+  const impersonateOrgId = !ignoreImpersonation
+    ? cookieStore.get('impersonate_org_id')?.value
+    : undefined
   if (impersonateOrgId) {
     // Читаем настройки владельца (owner) импersonated организации
     const { data } = await service

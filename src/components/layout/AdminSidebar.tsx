@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Megaphone, Settings, Home, LogOut, Building2, CreditCard, BarChart3, HeadphonesIcon, Monitor, LineChart, Bot } from 'lucide-react'
+import { LayoutDashboard, Megaphone, Settings, Home, LogOut, Building2, CreditCard, BarChart3, HeadphonesIcon, Monitor, LineChart, Bot, AlertTriangle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Separator } from '@/components/ui/separator'
@@ -25,6 +25,7 @@ export function AdminSidebar() {
     { name: language === 'he' ? 'ארגונים' : 'Организации', href: '/admin/organizations', icon: Building2 },
     { name: language === 'he' ? 'אנליטיקה' : 'Аналитика', href: '/admin/modules', icon: BarChart3 },
     { name: language === 'he' ? 'פיננסים' : 'Финансы', href: '/admin/billing', icon: CreditCard },
+    { name: language === 'he' ? 'רשרשים תקועים' : 'Зависшие рассрочки', href: '/admin/installments', icon: AlertTriangle },
     { name: language === 'he' ? 'תמיכה' : 'Поддержка', href: '/admin/support', icon: HeadphonesIcon },
     { name: t('admin.ads'), href: '/admin/ads', icon: Megaphone },
     { name: t('admin.settings'), href: '/admin/settings', icon: Settings },

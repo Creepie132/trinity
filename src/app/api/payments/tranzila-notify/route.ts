@@ -51,7 +51,14 @@ export async function POST(request: NextRequest) {
 
   if (responseCode !== '000') {
     console.error('[tranzila-notify] Recurring charge failed for org:', orgId, '| Response:', responseCode)
-    await supabase.from('organizations').update({ billing_status: 'failed' }).eq('id', orgId)
+    // Обновляем billing_status и сбрасываем subscription_status чтобы система знала что оплата не прошла
+    await supabase
+      .from('organizations')
+      .update({
+        billing_status: 'failed',
+        subscription_status: 'expired',
+      })
+      .eq('id', orgId)
     return NextResponse.json({ ok: false, reason: 'charge_failed' })
   }
 
@@ -66,7 +73,6 @@ export async function POST(request: NextRequest) {
       subscription_status:     'active',
       billing_status:          'paid',
       billing_due_date:        nextBillingStr,
-      last_billing_date:       new Date().toISOString().split('T')[0],
       subscription_expires_at: new Date(nextBilling.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
     })
     .eq('id', orgId)

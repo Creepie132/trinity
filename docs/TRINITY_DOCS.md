@@ -4637,3 +4637,44 @@ price: String(firstItem!.unit_price * firstItem!.quantity),
 - **Исправление:** При `responseCode !== '000'` теперь обновляются оба поля: `billing_status: 'failed'` + `subscription_status: 'expired'`.
 
 **Дополнительно:** `tranzila_card_expiry = null` для Hair Rehab — expdate не сохранился при регистрации подписки (Tranzila не прислала или не попало в URL). Это не влияет на My Billing (Tranzila сама хранит expdate), но требует ручной проверки при смене карты.
+
+---
+
+## 03.05.2026 — security: двухфазный коммит рассрочек, LIMIT 25, IP allowlist webhook
+**Коммит:** `da73148`
+**Файлы:**
+- `src/lib/installments.ts`
+- `src/app/api/cron/charge-installments/route.ts`
+- `src/app/api/payments/tranzila-notify/route.ts`
+- **Supabase migration:** `add_pending_status_to_installment_charges`
+
+### Что изменено и зачем
+
+**1. Двухфазный коммит (installments.ts)**
+Раньше `chargeInstallment()` сначала стучался в Tranzila, а потом писал результат в `installment_charges`.
+Если Vercel падал после списания — завтра крон приходил снова и списывал дважды.
+Теперь: `insert pending` → Tranzila CGI → `update success/failed`.
+При зависшем `pending` (признак краша после Tranzila) — крон пропускает план с предупреждением в лог.
+
+**2. LIMIT 25 в кроне (charge-installments/route.ts)**
+Убрана возможность упасть по таймауту Vercel (60s) при большом числе рассрочек.
+Каждый запуск обрабатывает максимум 25 планов. Следующий запуск подберёт остаток.
+
+**3. Идемпотентность (charge-installments/route.ts)**
+Перед зарядом крон проверяет наличие `pending`-записи для данного плана и номера платежа.
+Если есть — skip + warning в лог, требует ручного разбирательства.
+
+**4. IP Allowlist (tranzila-notify/route.ts)**
+Webhook `/api/payments/tranzila-notify` теперь принимает запросы только с IP-адресов Tranzila.
+IP проверяется из `x-forwarded-for` (Vercel проксирует).
+Для локального тестирования: `TRANZILA_SKIP_IP_CHECK=true` в `.env.local`.
+**⚠️ Действие:** Запросить актуальный пул IP у support@tranzila.com и обновить массив `TRANZILA_ALLOWED_IPS` в файле.
+
+**5. Supabase migration**
+`installment_charges.status` CHECK constraint расширен: добавлено значение `'pending'`.
+Было: `CHECK (status IN ('success', 'failed'))`.
+Стало: `CHECK (status IN ('pending', 'success', 'failed'))`.
+
+### Tech Debt зафиксирован
+- **Dunning (retry при failed):** 3 попытки с шагом 1-2 дня, уведомление владельцу. Реализовать в следующем спринте.
+- **QStash:** рассмотреть при объёме >200 рассрочек/день.

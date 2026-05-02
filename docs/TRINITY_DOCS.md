@@ -1,6 +1,6 @@
 ﻿# Trinity CRM — Полная документация
 
-> Amber Solutions · [ambersol.co.il](http://ambersol.co.il) · Последнее обновление: 20.04.2026
+> Amber Solutions · [ambersol.co.il](http://ambersol.co.il) · Последнее обновление: 02.05.2026
 
 ---
 
@@ -4619,3 +4619,21 @@ price: String(firstItem!.unit_price * firstItem!.quantity),
 
 ### Следующий шаг
 Механика загрузки картинок для карусели (Анета сама загружает фото для каждого слота через Trinity).
+
+---
+
+## Changelog — май 2026
+
+### 02.05.2026 — fix: tranzila-notify багфикс
+**Файл:** `src/app/api/payments/tranzila-notify/route.ts`
+**Коммит:** `315e7dc`
+
+**Причина:** Письмо от Tranzila о неудачном списании ₪350 с Hair Rehab (Ксения, org `b1a38ae1`). Код ошибки `002` — карта отклонена банком. В ходе расследования найдены два бага в notify-хендлере:
+
+**Баг 1 (критический):** UPDATE при успешном платеже включал поле `last_billing_date` — которого нет в таблице `organizations`. Любой успешный webhook от Tranzila My Billing приводил к DB-ошибке и подписка не обновлялась.
+- **Исправление:** Поле `last_billing_date` убрано из UPDATE. Актуальные поля: `subscription_status`, `billing_status`, `billing_due_date`, `subscription_expires_at`.
+
+**Баг 2:** При провале платежа обновлялся только `billing_status = 'failed'`, но `subscription_status` оставался `'active'`. Система считала подписку активной даже при неоплате.
+- **Исправление:** При `responseCode !== '000'` теперь обновляются оба поля: `billing_status: 'failed'` + `subscription_status: 'expired'`.
+
+**Дополнительно:** `tranzila_card_expiry = null` для Hair Rehab — expdate не сохранился при регистрации подписки (Tranzila не прислала или не попало в URL). Это не влияет на My Billing (Tranzila сама хранит expdate), но требует ручной проверки при смене карты.

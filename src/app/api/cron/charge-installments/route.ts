@@ -20,12 +20,14 @@ export async function GET(request: NextRequest) {
   const supabase = createSupabaseServiceClient()
   const today = new Date().toISOString().split('T')[0]
 
-  // Берём все активные планы у которых next_due_date <= сегодня
+  // Берём батч активных планов (LIMIT 25 — защита от таймаута Vercel)
+  // Следующий запуск крона подберёт остаток, если планов больше 25
   const { data: plans, error } = await supabase
     .from('payment_installments')
     .select('*')
     .eq('status', 'active')
     .lte('next_due_date', today)
+    .limit(25)
 
   if (error) {
     console.error('[cron/charge-installments] fetch error:', error)
@@ -36,6 +38,24 @@ export async function GET(request: NextRequest) {
 
   for (const plan of (plans || [])) {
     try {
+      // Идемпотентность: если уже есть pending-запись для этого плана и номера платежа —
+      // значит предыдущий запуск крона упал после отправки в Tranzila.
+      // Пропускаем — нельзя списывать повторно, нужно ручное разбирательство.
+      const nextInstallmentNumber = plan.installments_paid + 1
+      const { data: existingPending } = await supabase
+        .from('installment_charges')
+        .select('id')
+        .eq('installment_plan_id', plan.id)
+        .eq('installment_number', nextInstallmentNumber)
+        .eq('status', 'pending')
+        .maybeSingle()
+
+      if (existingPending) {
+        console.warn(`[cron/charge-installments] plan ${plan.id} has stale pending charge — skipping, needs manual review`)
+        results.push({ plan_id: plan.id, success: false, error: 'Stale pending — manual review required' })
+        continue
+      }
+
       // Получаем терминал организации
       const { data: org } = await supabase
         .from('organizations')
@@ -47,8 +67,6 @@ export async function GET(request: NextRequest) {
         results.push({ plan_id: plan.id, success: false, error: 'No terminal configured' })
         continue
       }
-
-      const nextInstallmentNumber = plan.installments_paid + 1
 
       const chargeResult = await chargeInstallment({
         plan,

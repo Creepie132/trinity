@@ -8,6 +8,20 @@ const supabase = createClient(
 )
 
 /**
+ * Официальные IP-адреса серверов Tranzila.
+ * Обновить если Tranzila пришлёт новый пул — запросить у support@tranzila.com.
+ * В режиме DEV (TRANZILA_SKIP_IP_CHECK=true) проверка отключается для локального тестирования.
+ */
+const TRANZILA_ALLOWED_IPS = [
+  '194.90.149.182',
+  '194.90.149.183',
+  '194.90.149.184',
+  '194.90.149.185',
+  '212.179.193.166',
+  '212.179.193.167',
+]
+
+/**
  * POST /api/payments/tranzila-notify
  *
  * Tranzila My Billing шлёт этот callback при каждом автоматическом
@@ -21,6 +35,18 @@ const supabase = createClient(
  *   index            — ID транзакции
  */
 export async function POST(request: NextRequest) {
+  // ── IP Allowlist: принимаем только запросы с серверов Tranzila ───────────
+  // Vercel проксирует запросы — реальный IP в x-forwarded-for (первый в списке)
+  const skipIpCheck = process.env.TRANZILA_SKIP_IP_CHECK === 'true'
+  if (!skipIpCheck) {
+    const forwardedFor = request.headers.get('x-forwarded-for') ?? ''
+    const clientIp = forwardedFor.split(',')[0].trim()
+    if (!TRANZILA_ALLOWED_IPS.includes(clientIp)) {
+      console.warn('[tranzila-notify] Blocked request from unauthorized IP:', clientIp)
+      return NextResponse.json({ ok: false }, { status: 403 })
+    }
+  }
+
   let body: Record<string, string> = {}
 
   try {

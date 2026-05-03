@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
 
     const response = NextResponse.json({ ok: true })
     response.cookies.delete('trinity_sub_ok')
+    response.cookies.delete('trinity_paywall_data')
     return response
   } catch (err) {
     console.error('[billing/invalidate] error:', err)

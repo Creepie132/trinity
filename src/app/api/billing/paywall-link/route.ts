@@ -72,8 +72,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
-    const body = await req.json().catch(() => ({}))
-    const plan = body.plan || org.plan || 'basic'
+    // plan берётся ТОЛЬКО из БД — клиент не может подменить через body
+    const plan = org.plan || 'basic'
     const amount = PLAN_PRICES[plan] ?? 199
 
     const origin = process.env.NEXT_PUBLIC_APP_URL || 'https://www.ambersol.co.il'

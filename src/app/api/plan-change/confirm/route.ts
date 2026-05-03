@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createReceipt } from '@/lib/tranzila-invoices'
 import { resend, getEmailHeaders, getEmailTags } from '@/lib/resend'
+import { getPlanModules, normalizePlan } from '@/lib/billing-plans'
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.ambersol.co.il'
 
@@ -215,12 +216,27 @@ export async function POST(request: NextRequest) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function applyPlanChange(req: any) {
+  const normalizedPlan = normalizePlan(req.to_plan)
+  const planModules = getPlanModules(normalizedPlan)
+
+  // Читаем существующие features чтобы не затереть кастомные настройки
+  const { data: orgRow } = await supabase
+    .from('organizations')
+    .select('features')
+    .eq('id', req.org_id)
+    .single()
+  const existingFeatures = (orgRow?.features as Record<string, any>) ?? {}
+
   await supabase.from('organizations').update({
-    plan:              req.to_plan,
-    billing_amount:    req.to_price,
-    pending_plan:      null,
+    plan:               normalizedPlan,
+    billing_amount:     req.to_price,
+    pending_plan:       null,
     pending_plan_price: null,
     pending_plan_date:  null,
+    features: {
+      ...existingFeatures,
+      modules: planModules,
+    },
   }).eq('id', req.org_id)
 }
 

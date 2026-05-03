@@ -1,27 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { getAdminAuthContext } from '@/lib/auth-helpers'
+import { getPlanModules, normalizePlan, VALID_PLANS } from '@/lib/billing-plans'
 
-// ─── Маппинг план → модули (аналогичен webhook) ───────────────────────────────
-const PLAN_MODULES: Record<string, Record<string, boolean>> = {
-  base: {
-    clients: true,  visits: true,   diary: true,   inventory: true,
-    payments: true, analytics: false, sms: false,  booking: false,
-    loyalty: false, branches: false, subscriptions: false,
-  },
-  pro: {
-    clients: true,  visits: true,   diary: true,   inventory: true,
-    payments: true, analytics: true, sms: true,   booking: true,
-    loyalty: false, branches: false, subscriptions: false,
-  },
-  enterprise: {
-    clients: true,  visits: true,   diary: true,   inventory: true,
-    payments: true, analytics: true, sms: true,   booking: true,
-    loyalty: true,  branches: true,  subscriptions: true,
-  },
-}
-
-const VALID_PLANS = ['base', 'pro', 'enterprise'] as const
 type Plan = typeof VALID_PLANS[number]
 
 /**
@@ -57,11 +38,10 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const plan = (body.plan ?? 'base') as Plan
+  const plan = normalizePlan(body.plan ?? 'basic') as Plan
   const explicitModules: Record<string, boolean> | null = body.modules ?? null
 
-  // Если plan передан — он должен быть из допустимых значений
-  if (!VALID_PLANS.includes(plan)) {
+  if (!VALID_PLANS.includes(plan as Plan)) {
     return NextResponse.json(
       { error: `Invalid plan. Allowed: ${VALID_PLANS.join(', ')}` },
       { status: 400 }
@@ -97,7 +77,7 @@ export async function POST(
 
   // ── 4. Вычисляем новые модули ────────────────────────────────────────────
   // Приоритет: explicit modules > план из PLAN_MODULES > базовый план
-  const newModules = explicitModules ?? PLAN_MODULES[plan] ?? PLAN_MODULES['base']
+  const newModules = explicitModules ?? getPlanModules(plan)
 
   // Сохраняем существующие features — не удаляем бизнес-конфигурацию
   const existingFeatures = (org.features as Record<string, any>) ?? {}

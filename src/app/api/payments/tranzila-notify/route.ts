@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createReceipt } from '@/lib/tranzila-invoices'
+import { getPlanModules, normalizePlan } from '@/lib/billing-plans'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
   // Если это prorated charge за смену плана — применяем новый план
   const planChangeUpdates: Record<string, any> = {}
   if (isPlanChange && planChangeMatch) {
-    const newPlan  = planChangeMatch[1]
+    const newPlan  = normalizePlan(planChangeMatch[1])
     const newPrice = parseFloat(planChangeMatch[2])
     planChangeUpdates.plan               = newPlan
     planChangeUpdates.billing_amount     = newPrice
@@ -147,6 +148,22 @@ export async function POST(request: NextRequest) {
     console.error('[tranzila-notify] Credit apply failed (non-fatal):', creditErr)
   }
 
+  // Определяем актуальный план для обновления modules
+  const currentPlan = isPlanChange && planChangeMatch
+    ? normalizePlan(planChangeMatch[1])
+    : undefined // будет прочитан из БД ниже
+
+  // Читаем текущий план и features из БД (нужно для обновления modules)
+  const { data: orgCurrent } = await supabase
+    .from('organizations')
+    .select('plan, features')
+    .eq('id', orgId)
+    .single()
+
+  const resolvedPlan = currentPlan ?? normalizePlan(orgCurrent?.plan)
+  const planModules = getPlanModules(resolvedPlan)
+  const existingFeatures = (orgCurrent?.features as Record<string, any>) ?? {}
+
   const { error } = await supabase
     .from('organizations')
     .update({
@@ -154,6 +171,10 @@ export async function POST(request: NextRequest) {
       billing_status:          'paid',
       billing_due_date:        nextBillingStr,
       subscription_expires_at: new Date(nextBilling.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+      features: {
+        ...existingFeatures,
+        modules: planModules,
+      },
       ...planChangeUpdates,
     })
     .eq('id', orgId)

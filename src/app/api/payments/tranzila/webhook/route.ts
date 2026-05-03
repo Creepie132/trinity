@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createTranzilaInvoice, getInvoiceDisplayUrl, TRANZILA_INVOICE_ERRORS, mapPaymentMethodToTranzila } from '@/lib/tranzila-invoices'
+import { getPlanModules, normalizePlan } from '@/lib/billing-plans'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,51 +9,6 @@ const supabaseAdmin = createClient(
 )
 
 const TRANZILA_IPS = ['62.219.85.140', '62.219.85.141', '62.219.85.148']
-
-const PLAN_FEATURES: Record<string, Record<string, boolean>> = {
-  basic: {
-    clients: true,
-    visits: true,
-    booking: true,
-    payments: true,
-    statistics: true,
-    sms: false,
-    inventory: false,
-    reports: false,
-    subscriptions: false,
-    telegram: false,
-    loyalty: false,
-    birthday: false,
-  },
-  pro: {
-    clients: true,
-    visits: true,
-    booking: true,
-    payments: true,
-    statistics: true,
-    sms: true,
-    inventory: true,
-    reports: true,
-    subscriptions: true,
-    telegram: false,
-    loyalty: true,
-    birthday: true,
-  },
-  enterprise: {
-    clients: true,
-    visits: true,
-    booking: true,
-    payments: true,
-    statistics: true,
-    sms: true,
-    inventory: true,
-    reports: true,
-    subscriptions: true,
-    telegram: true,
-    loyalty: true,
-    birthday: true,
-  },
-}
 
 const handleWebhook = async (req: NextRequest) => {
   try {
@@ -127,7 +83,7 @@ const handleWebhook = async (req: NextRequest) => {
 
     // ── УСПЕШНАЯ ОПЛАТА ──
     const meta = payment.metadata as Record<string, unknown>
-    const plan = (meta?.plan as string) ?? 'basic'
+    const plan = normalizePlan((meta?.plan as string) ?? 'basic')
     const clientEmail = (meta?.client_email as string) ?? ''
     const clientName = (meta?.client_name as string) ?? 'לקוח'
     const setupFee = (meta?.setup_fee as number) ?? 0
@@ -179,6 +135,8 @@ const handleWebhook = async (req: NextRequest) => {
     const nextMonth = new Date(now)
     nextMonth.setMonth(nextMonth.getMonth() + 1)
 
+    const planModules = getPlanModules(plan)
+
     await supabaseAdmin
       .from('organizations')
       .update({
@@ -186,8 +144,8 @@ const handleWebhook = async (req: NextRequest) => {
         subscription_expires_at: nextMonth.toISOString(),
         plan: plan,
         features: {
-          ...(PLAN_FEATURES[plan] ?? PLAN_FEATURES.basic),
-          modules: PLAN_FEATURES[plan] ?? PLAN_FEATURES.basic,
+          ...planModules,
+          modules: planModules,
         },
         updated_at: now.toISOString(),
       })

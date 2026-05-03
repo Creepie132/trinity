@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendSubscriptionWelcomeEmail } from '@/lib/resend'
 import { createTranzilaInvoice, getInvoiceDisplayUrl } from '@/lib/tranzila-invoices'
+import { getPlanModules, normalizePlan } from '@/lib/billing-plans'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
     // Защита от повторной оплаты по той же ссылке
     const { data: existingOrg } = await supabase
       .from('organizations')
-      .select('subscription_status, billing_due_date')
+      .select('subscription_status, billing_due_date, plan, features')
       .eq('id', orgId)
       .single()
 
@@ -111,10 +112,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${ADMIN_URL}/subscription-success?already=1`, { status: 303 })
     }
 
-    // Следующая дата списания — сегодня + 30 дней
     const nextBilling = new Date()
     nextBilling.setDate(nextBilling.getDate() + 30)
     const nextBillingStr = nextBilling.toISOString().split('T')[0]
+
+    const resolvedPlan = normalizePlan(existingOrg?.plan)
+    const planModules = getPlanModules(resolvedPlan)
+    const existingFeatures = (existingOrg?.features as Record<string, any>) ?? {}
 
     const { error } = await supabase
       .from('organizations')
@@ -126,8 +130,12 @@ export async function GET(request: NextRequest) {
         billing_status: 'paid',
         billing_due_date: nextBillingStr,
         subscription_expires_at: new Date(
-          nextBilling.getTime() + 3 * 24 * 60 * 60 * 1000 // +3 дня запас
+          nextBilling.getTime() + 3 * 24 * 60 * 60 * 1000
         ).toISOString(),
+        features: {
+          ...existingFeatures,
+          modules: planModules,
+        },
       })
       .eq('id', orgId)
 
@@ -260,7 +268,7 @@ export async function POST(request: NextRequest) {
     // Защита от повторной оплаты по той же ссылке
     const { data: existingOrg } = await supabase
       .from('organizations')
-      .select('subscription_status, billing_due_date')
+      .select('subscription_status, billing_due_date, plan, features')
       .eq('id', orgId)
       .single()
 
@@ -272,6 +280,10 @@ export async function POST(request: NextRequest) {
     const nextBilling = new Date()
     nextBilling.setDate(nextBilling.getDate() + 30)
     const nextBillingStr = nextBilling.toISOString().split('T')[0]
+
+    const resolvedPlanPost = normalizePlan(existingOrg?.plan)
+    const planModulesPost = getPlanModules(resolvedPlanPost)
+    const existingFeaturesPost = (existingOrg?.features as Record<string, any>) ?? {}
 
     await supabase
       .from('organizations')
@@ -285,6 +297,10 @@ export async function POST(request: NextRequest) {
         subscription_expires_at: new Date(
           nextBilling.getTime() + 3 * 24 * 60 * 60 * 1000
         ).toISOString(),
+        features: {
+          ...existingFeaturesPost,
+          modules: planModulesPost,
+        },
       })
       .eq('id', orgId)
 

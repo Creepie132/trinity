@@ -9,60 +9,10 @@ import {
 import { sendSubscriptionWelcomeEmail } from '@/lib/resend'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { queuePushToTrinityAdmin } from '@/lib/push-notify'
+import { getPlanModules, getPlanPrice, normalizePlan } from '@/lib/billing-plans'
 
-// ─── Серверные конфиги тарифов ────────────────────────────────────────────────
-// Единый источник правды: цена, модули, лимиты.
-// client_limit: null = безлимит (аналог subscription-plans.ts)
-// TOLERANCE_ILS: допустимая погрешность округления от Tranzila (агатин fee)
+// Допустимая погрешность округления от Tranzila
 const TOLERANCE_ILS = 1.0
-
-interface PlanConfig {
-  price: number
-  client_limit: number | null   // null = безлимит
-  modules: Record<string, boolean>
-}
-
-const PLAN_CONFIG: Record<string, PlanConfig> = {
-  base: {
-    price: 199,
-    client_limit: null,
-    modules: {
-      clients: true, visits: true, diary: true, inventory: true,
-      payments: true, analytics: false, sms: false, booking: false,
-      loyalty: false, branches: false, subscriptions: false,
-    },
-  },
-  pro: {
-    price: 249,
-    client_limit: null,
-    modules: {
-      clients: true, visits: true, diary: true, inventory: true,
-      payments: true, analytics: true, sms: true, booking: true,
-      loyalty: false, branches: false, subscriptions: false,
-    },
-  },
-  enterprise: {
-    price: 499,
-    client_limit: null,
-    modules: {
-      clients: true, visits: true, diary: true, inventory: true,
-      payments: true, analytics: true, sms: true, booking: true,
-      loyalty: true, branches: true, subscriptions: true,
-    },
-  },
-}
-
-// Fallback для custom/unknown планов — минимальный набор
-const FALLBACK_CONFIG: PlanConfig = {
-  price: 0,   // custom — цена договорная, проверку цены пропускаем
-  client_limit: null,
-  modules: PLAN_CONFIG['base'].modules,
-}
-
-function getPlanConfig(plan: string | null): PlanConfig {
-  if (!plan) return PLAN_CONFIG['base']
-  return PLAN_CONFIG[plan] ?? FALLBACK_CONFIG
-}
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -160,10 +110,11 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 7. PRICE TAMPERING CHECK ──────────────────────────────────────────────
-  const planField   = params['cField2'] ?? null   // 'base' | 'pro' | 'enterprise'
-  const planConfig  = getPlanConfig(planField)
+  const planField   = params['cField2'] ?? null
+  const normalizedPlan = normalizePlan(planField)
+  const planModules = getPlanModules(normalizedPlan)
+  const expectedMin = getPlanPrice(normalizedPlan)  // 0 для custom = проверка пропускается
   const paidAmount  = data.sum ? parseFloat(data.sum) : 0
-  const expectedMin = planConfig.price           // 0 для custom = проверка пропускается
 
   if (expectedMin > 0 && paidAmount < expectedMin - TOLERANCE_ILS) {
     const fraudMsg = [
@@ -225,9 +176,6 @@ export async function POST(request: NextRequest) {
 
   const existingFeatures = (orgRow?.features as Record<string, any>) ?? {}
 
-  // client_limit: null = безлимит (не хардкодим магическое число)
-  const newClientLimit = planConfig.client_limit  // null | number
-
   // ── 9. Атомарное обновление: demo → active + модули + карта ──────────────
   const { error: updateError } = await supabase
     .from('organizations')
@@ -239,12 +187,12 @@ export async function POST(request: NextRequest) {
       billing_due_date:        nextBillingDate.toISOString().split('T')[0],
       subscription_status:     'active',
       subscription_expires_at: expiresAt.toISOString(),
-      plan:                    planField ?? 'base',
+      plan:                    normalizedPlan,
       features: {
         ...existingFeatures,
-        modules:      planConfig.modules,
+        modules:      planModules,
         is_demo:      false,
-        client_limit: newClientLimit,  // null = безлимит, число = конкретный лимит
+        client_limit: null,  // null = безлимит
       },
     })
     .eq('id', data.orgId)
@@ -254,10 +202,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to save' }, { status: 500 })
   }
 
-  const activeModules = Object.keys(planConfig.modules).filter(k => planConfig.modules[k])
+  const activeModules = Object.keys(planModules).filter(k => planModules[k])
   console.log('[Tranzila] ✅ Org activated:', data.orgId, {
-    plan: planField, last4: cardLast4, paid: paidAmount,
-    expected: expectedMin, modules: activeModules, client_limit: newClientLimit,
+    plan: normalizedPlan, last4: cardLast4, paid: paidAmount,
+    expected: expectedMin, modules: activeModules,
   })
 
   // ── 10. Billing log ───────────────────────────────────────────────────────
@@ -269,7 +217,7 @@ export async function POST(request: NextRequest) {
       transaction_id: data.transactionId,
       card_last4:     cardLast4,
       type:           'first_payment',
-      notes:          `Plan: ${planField ?? 'base'} | Paid: ₪${paidAmount} | Modules: ${activeModules.join(',')}`,
+      notes:          `Plan: ${normalizedPlan} | Paid: ₪${paidAmount} | Modules: ${activeModules.join(',')}`
     })
   } catch (logErr) {
     console.warn('[Tranzila] billing_log write failed (non-fatal):', logErr)
@@ -305,7 +253,7 @@ export async function POST(request: NextRequest) {
         `💰 <b>Новая оплата подписки!</b>`,
         `Орг: <b>${orgRow?.name ?? data.orgId}</b>`,
         `Email: <code>${data.orgId}</code>`,
-        `Тариф: <b>${planField ?? 'base'}</b>`,
+        `Тариф: <b>${normalizedPlan}</b>`,
         `Сумма: <b>₪${paidAmount}</b>`,
         `Карта: ****${cardLast4 ?? '????'}`,
         `Следующее списание: <b>${nextBillingDate.toISOString().split('T')[0]}</b>`,
@@ -323,7 +271,7 @@ export async function POST(request: NextRequest) {
   queuePushToTrinityAdmin({
     type:   'payment_received',
     title:  `💰 Новая оплата: ${orgRow?.name ?? 'Организация'}`,
-    body:   `₪${paidAmount} · Тариф ${planField ?? 'base'} · Карта ****${cardLast4 ?? '????'} · Следующее списание ${nextBillingDate.toISOString().split('T')[0]}`,
+    body:   `₪${paidAmount} · Тариф ${normalizedPlan} · Карта ****${cardLast4 ?? '????'} · Следующее списание ${nextBillingDate.toISOString().split('T')[0]}`,
     link:   '/admin/organizations',
   }).catch(e => console.error('[Tranzila] Admin in-app notification failed:', e))
 

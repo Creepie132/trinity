@@ -4678,3 +4678,32 @@ IP проверяется из `x-forwarded-for` (Vercel проксирует).
 ### Tech Debt зафиксирован
 - **Dunning (retry при failed):** 3 попытки с шагом 1-2 дня, уведомление владельцу. Реализовать в следующем спринте.
 - **QStash:** рассмотреть при объёме >200 рассрочек/день.
+
+---
+
+## i18n Итерация №1 — 03.05.2026 (коммит 1b220c5)
+
+### Что сделано
+
+**1. Динамический PWA Manifest — `src/app/api/manifest/route.ts`**
+- Статический `manifest.json` был захардкожен на иврит. Создан API route `/api/manifest` (GET), который читает cookie `trinity_locale` и отдаёт локализованный манифест. Fallback: любой невалидный cookie → `'he'`.
+- Локализованы: `name`, `short_name`, `description`, `lang`, `dir`, `shortcuts` (RU: Клиенты/Визиты/Платежи).
+- `layout.tsx`: ссылка изменена на `href="/api/manifest"`.
+
+**2. Локализация `/login` — `src/app/login/page.tsx`**
+- Подключён `useLanguage()`, все строки через `t('login.*')`, все `setError` через ключи словаря.
+- Добавлен переключатель `RU | עב` до ввода данных (критично для онбординга).
+- Стрелка "назад" зеркалится по `dir`. Корневой `<div dir={dir}>` без глобального влияния.
+- Новые ключи в обоих языках: `login.backToHome`, `login.welcome`, `login.subtitle`, `login.withGoogle`, `login.connecting`, `login.orDivider`, `login.withEmail`, `login.emailPlaceholder`, `login.passwordPlaceholder`, `login.signIn`, `login.signingIn`, `login.backToGoogle`, `login.footerDesc`, `login.secureConnection`, `login.hebrewSupport`, `login.error.*` (×4).
+
+**3. Шрифт `Assistant` → `Rubik` (стандарт Trinity)**
+- `layout.tsx`: импорт `Rubik` с весами 400/500/700/800, subsets hebrew+latin.
+- `globals.css`: `--font-assistant` → `--font-rubik`.
+- `LanguageContext.applyLanguage()`: класс `font-assistant` → `font-rubik`.
+- `tailwind.config.js`: `fontFamily.sans` и `fontFamily.hebrew` обновлены.
+
+### Затронутые файлы
+`src/app/api/manifest/route.ts` (новый), `src/app/layout.tsx`, `src/app/login/page.tsx`, `src/app/globals.css`, `src/contexts/LanguageContext.tsx`, `tailwind.config.js`
+
+### Регрессия
+Нет. Билд чистый (244 страницы, 0 ошибок TypeScript).

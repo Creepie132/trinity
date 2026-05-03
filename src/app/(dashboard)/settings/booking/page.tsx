@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranch } from '@/contexts/BranchContext'
-import { useRouter } from 'next/navigation'
 import { ArrowLeft, Copy, Check, Download, Printer, QrCode, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -64,9 +63,9 @@ export default function BookingSettingsPage() {
   const { t, language } = useLanguage()
   const { orgId, user } = useAuth()
   const { activeOrgId } = useBranch()
-  const router = useRouter()
   const [activeTab, setActiveTab] = useState<'booking' | 'registration'>('booking')
   const [settings, setSettings] = useState<BookingSettings>(defaultSettings)
+  const [bookingModuleEnabled, setBookingModuleEnabled] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -87,15 +86,13 @@ export default function BookingSettingsPage() {
       const modules = (data?.features as any)?.modules || {}
       const hasBooking = modules.booking === true || modules.online_booking === true
 
-      if (!hasBooking) {
-        router.push('/settings')
-      }
+      setBookingModuleEnabled(hasBooking)
     }
 
     if (activeOrgId) {
       checkAccess()
     }
-  }, [activeOrgId, router])
+  }, [activeOrgId])
 
   // Load settings
   useEffect(() => {
@@ -306,6 +303,42 @@ export default function BookingSettingsPage() {
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
           <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    )
+  }
+
+  // Модуль онлайн-записи отключён — показываем заглушку, не редиректим
+  if (bookingModuleEnabled === false) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 space-y-6">
+        <div className="flex items-center gap-4">
+          <Link href="/settings">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              {language === 'he' ? 'קביעת תורים מקוונת' : 'Онлайн-запись'}
+            </h1>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-6 text-center space-y-3">
+          <Calendar className="w-10 h-10 mx-auto text-amber-500" />
+          <h2 className="text-lg font-semibold text-amber-800 dark:text-amber-300">
+            {language === 'he' ? 'מודול קביעת תורים אינו פעיל' : 'Модуль онлайн-записи не подключён'}
+          </h2>
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+            {language === 'he'
+              ? 'פנה למנהל המערכת כדי להפעיל את מודול קביעת התורים'
+              : 'Обратитесь к администратору системы для подключения модуля онлайн-записи'}
+          </p>
+          <Link href="/settings">
+            <Button variant="outline" size="sm" className="mt-2">
+              {language === 'he' ? 'חזרה להגדרות' : 'Вернуться в настройки'}
+            </Button>
+          </Link>
         </div>
       </div>
     )

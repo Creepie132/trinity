@@ -4825,3 +4825,69 @@ IP проверяется из `x-forwarded-for` (Vercel проксирует).
 - Avatar upload защищён проверкой активного токена
 - Нет доступа к чужим клиентам (org_id изолирован)
 - Публичные endpoints не возвращают org_id или чувствительные данные
+
+---
+
+### 03.05.2026 — Security Audit: Client Self-Edit hardening (коммит 2a14531)
+
+#### 1. Rate Limiting на `/api/client-self-edit/generate`
+- Используется `ratelimitStrict` из `@upstash/ratelimit` (уже подключён в проекте)
+- Лимит: 5 запросов в 60 секунд на `user.id` (sliding window)
+- Ключ: `generate-edit-link:{user_id}` — изолирован от других лимитеров
+- При превышении: HTTP 429 + заголовок `Retry-After: 60`
+- Graceful degradation: если Upstash не настроен — mock разрешает всё (не падает)
+- **Бонус**: добавлена IDOR-защита — проверка `client.org_id === orgId` (нельзя генерировать токены для клиентов чужой org)
+
+#### 2. Кликабельный toast + client_id в уведомлении
+- `useClientSelfEditRealtime` переписан: toast теперь содержит кнопку «Открыть →» / «פתח ←»
+- При клике: `router.push('/clients/{client_id}')` — мгновенный переход в карточку
+- `dispatchNotification` теперь передаёт `vars: { name, client_id }` — URL push-уведомления `/clients/{client_id}` строится с реальным ID
+- Duration toast: 8 секунд (было 6)
+
+#### 3. Race Condition Fix — атомарный burn токена
+- **Было**: READ токена → проверка is_active → UPDATE is_active=false → два параллельных запроса могли пройти оба
+- **Стало**: один атомарный `UPDATE ... WHERE is_active=true AND expires_at>now() RETURNING id`
+  - PostgreSQL сериализует UPDATE на уровне строки — race condition физически невозможен
+  - Если строка уже сожжена — RETURNING возвращает 0 строк → HTTP 410 сразу
+  - Body парсится только после успешного burn (нет лишней работы при повторе)
+  - Токен не восстанавливается при ошибке обновления клиента (fail-safe)
+
+#### 4. Cleanup токенов
+- `pg_cron` job `cleanup-expired-edit-tokens` — ежедневно в 03:00 UTC
+  - Удаляет записи с `expires_at < now() - 1h` (grace period 1 час)
+  - `jobid: 10`, активен
+- Vercel cron `/api/cron/cleanup-tokens` — резервный маршрут, тот же schedule
+- Добавлен в `vercel.json`
+
+#### 5. Employee Permissions ACL v2 (БД)
+Новые объекты в Supabase:
+
+**`permission_sets`** — шаблоны ролей (пресеты)
+- `org_id`, `name` (уникально в org), `permissions jsonb`, `is_default`
+- RLS: read — все члены org, write — только owner
+
+**`employee_module_access`** — доступ к модулям на уровне сотрудника
+- `module_key` (clients/visits/payments/inventory/...), `can_view/create/edit/delete`
+- Индекс по `(org_id, user_id)` для быстрой загрузки ACL
+- RLS: сотрудник читает только своё, owner управляет всем
+
+**`staff_permissions` — новые колонки** (22 итого):
+- Финансы: `can_view_payments`, `can_create_payments`, `can_apply_discounts`, `can_cancel_payments`
+- Клиенты: `can_delete_clients`, `can_send_edit_links`
+- Визиты: `can_delete_visits`, `can_view_other_staff_visits`
+- Склад: `can_add_inventory`, `can_delete_inventory`
+- Настройки: `can_edit_services`, `can_manage_staff`
+- Связь: `permission_set_id → permission_sets(id)`
+
+**VIEW `employee_acl`** — плоское представление всех прав сотрудника с join на org_users и permission_sets. Используется для быстрого аудита и будущего UI настроек.
+
+#### Затронутые файлы
+- `src/app/api/client-self-edit/generate/route.ts` (rate limit + IDOR fix)
+- `src/app/api/client-self-edit/token/[token]/route.ts` (atomic burn)
+- `src/hooks/useClientSelfEditRealtime.ts` (clickable toast)
+- `src/app/api/cron/cleanup-tokens/route.ts` (новый)
+- `vercel.json` (новый cron)
+- Supabase: 3 миграции (cleanup cron, permission_sets, employee_module_access + ACL columns)
+
+#### Регрессия
+Нет. Build чистый (247 страниц, 0 ошибок TypeScript).

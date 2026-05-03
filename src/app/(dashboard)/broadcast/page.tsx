@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { MessageCircle, Users, Send, AlertTriangle, CheckCircle2, Search, Clock, Filter, X, ChevronDown } from 'lucide-react'
+import { MessageCircle, Users, Send, AlertTriangle, CheckCircle2, Search, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -17,15 +17,16 @@ interface Client {
 
 interface LimitStatus { used: number; remaining: number; limit: number }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function daysSince(date: string | null | undefined): number | null {
   if (!date) return null
   return Math.floor((Date.now() - new Date(date).getTime()) / 86_400_000)
 }
 
-// ─── LimitBar ────────────────────────────────────────────────────────────────
-function LimitBar({ status, l }: { status: LimitStatus; l: boolean }) {
-  const pct = Math.round((status.used / status.limit) * 100)
+// ─── LimitBar ─────────────────────────────────────────────────────────────────
+function LimitBar({ status }: { status: LimitStatus }) {
+  const { t } = useLanguage()
+  const pct  = Math.round((status.used / status.limit) * 100)
   const over = status.remaining === 0
 
   return (
@@ -41,7 +42,7 @@ function LimitBar({ status, l }: { status: LimitStatus; l: boolean }) {
             ? <AlertTriangle size={16} className="text-red-500" />
             : <MessageCircle size={16} className="text-green-500" />}
           <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">
-            {l ? 'מגבלת שליחה יומית' : 'Дневной лимит отправки'}
+            {t('broadcast.limitTitle')}
           </span>
         </div>
         <span className={cn('text-sm font-bold', over ? 'text-red-600' : 'text-gray-600 dark:text-slate-400')}>
@@ -49,7 +50,6 @@ function LimitBar({ status, l }: { status: LimitStatus; l: boolean }) {
         </span>
       </div>
 
-      {/* Прогресс-бар */}
       <div className="w-full h-2 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden mb-2">
         <div
           className={cn('h-full rounded-full transition-all duration-500',
@@ -63,20 +63,16 @@ function LimitBar({ status, l }: { status: LimitStatus; l: boolean }) {
           <AlertTriangle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-red-700 dark:text-red-300">
-              {l ? '🚫 הגעת למגבלה היומית' : '🚫 Дневной лимит исчерпан'}
+              {t('broadcast.limitOver')}
             </p>
             <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
-              {l
-                ? 'תוכל לשלוח הודעות חדשות מחר. WhatsApp מגביל שליחה המונית להגנה על חשבונך.'
-                : 'Новые сообщения можно будет отправить завтра. WhatsApp ограничивает массовую рассылку для защиты аккаунта.'}
+              {t('broadcast.limitOverDesc')}
             </p>
           </div>
         </div>
       ) : (
         <p className="text-xs text-gray-500 dark:text-slate-400">
-          {l
-            ? `נותרו ${status.remaining} הודעות להיום`
-            : `Осталось ${status.remaining} сообщений на сегодня`}
+          {t('broadcast.limitRemaining', { count: status.remaining })}
         </p>
       )}
     </div>
@@ -84,10 +80,12 @@ function LimitBar({ status, l }: { status: LimitStatus; l: boolean }) {
 }
 
 // ─── ClientRow ────────────────────────────────────────────────────────────────
-function ClientRow({ client, selected, onToggle, l }: {
-  client: Client; selected: boolean; onToggle: () => void; l: boolean
+function ClientRow({ client, selected, onToggle }: {
+  client: Client; selected: boolean; onToggle: () => void
 }) {
-  const days = daysSince(client.last_visit_at)
+  const { t } = useLanguage()
+  const days  = daysSince(client.last_visit_at)
+
   return (
     <div
       onClick={onToggle}
@@ -98,7 +96,7 @@ function ClientRow({ client, selected, onToggle, l }: {
           : 'bg-white border-gray-100 hover:border-gray-300 dark:bg-slate-800 dark:border-slate-700'
       )}
     >
-      {/* Checkbox */}
+      {/* Чекбокс */}
       <div className={cn(
         'w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors',
         selected ? 'bg-green-500 border-green-500' : 'border-gray-300 dark:border-slate-500'
@@ -129,7 +127,7 @@ function ClientRow({ client, selected, onToggle, l }: {
             : days > 30 ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
             : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-400'
         )}>
-          {l ? `לפני ${days} ימים` : `${days} дн.`}
+          {t('broadcast.daysAgo', { count: days })}
         </div>
       )}
     </div>
@@ -155,15 +153,14 @@ function FilterButton({ label, active, onClick }: { label: string; active: boole
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function BroadcastPage() {
-  const { language } = useLanguage()
-  const l = language === 'he'
+  const { t, dir } = useLanguage()
   const qc = useQueryClient()
 
-  const [search, setSearch]         = useState('')
-  const [selected, setSelected]     = useState<Set<string>>(new Set())
-  const [message, setMessage]       = useState('')
-  const [absentFilter, setAbsent]   = useState<number | null>(null)
-  const [result, setResult]         = useState<{ sent: number; failed: number; skipped: number } | null>(null)
+  const [search,       setSearch]      = useState('')
+  const [selected,     setSelected]    = useState<Set<string>>(new Set())
+  const [message,      setMessage]     = useState('')
+  const [absentFilter, setAbsent]      = useState<number | null>(null)
+  const [result,       setResult]      = useState<{ sent: number; failed: number; skipped: number } | null>(null)
 
   // Лимит
   const { data: limitStatus } = useQuery<LimitStatus>({
@@ -194,18 +191,17 @@ export default function BroadcastPage() {
     return matchSearch && matchAbsent
   })
 
-  const toggleClient = (id: string) => {
+  const toggleClient = useCallback((id: string) => {
     setSelected(prev => {
       const next = new Set(prev)
       next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
-  }
+  }, [])
 
   const selectAll = () => {
     const limit = limitStatus?.remaining ?? 30
-    const ids = filtered.slice(0, limit).map(c => c.id)
-    setSelected(new Set(ids))
+    setSelected(new Set(filtered.slice(0, limit).map(c => c.id)))
   }
 
   const clearAll = () => setSelected(new Set())
@@ -237,18 +233,17 @@ export default function BroadcastPage() {
   const canSend = selected.size > 0 && message.trim().length > 0 && !sending && (limitStatus?.remaining ?? 0) > 0
 
   return (
-    <div className="flex flex-col lg:flex-row h-full min-h-0" dir={l ? 'rtl' : 'ltr'}>
+    <div className="flex flex-col lg:flex-row h-full min-h-0" dir={dir}>
 
       {/* ── Левая колонка: список клиентов ── */}
       <div className="flex flex-col lg:w-[420px] lg:border-e border-gray-200 dark:border-slate-700 h-full lg:overflow-hidden">
         <div className="p-5 border-b border-gray-100 dark:border-slate-700">
           <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100 flex items-center gap-2 mb-4">
             <MessageCircle size={22} className="text-green-500" />
-            {l ? 'רשימת תפוצה WhatsApp' : 'WhatsApp рассылка'}
+            {t('broadcast.title')}
           </h1>
 
-          {/* Лимит */}
-          {limitStatus && <LimitBar status={limitStatus} l={l} />}
+          {limitStatus && <LimitBar status={limitStatus} />}
 
           {/* Поиск */}
           <div className="relative mb-3">
@@ -256,32 +251,32 @@ export default function BroadcastPage() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder={l ? 'חיפוש לקוח...' : 'Поиск клиента...'}
+              placeholder={t('broadcast.searchPlaceholder')}
               className="w-full ps-9 pe-4 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 focus:outline-none focus:border-blue-400"
             />
           </div>
 
           {/* Фильтры по давности */}
           <div className="flex gap-2 flex-wrap mb-3">
-            <FilterButton label={l ? 'הכל' : 'Все'} active={absentFilter === null} onClick={() => setAbsent(null)} />
-            <FilterButton label={l ? '30+ ימים' : '30+ дней'} active={absentFilter === 30} onClick={() => setAbsent(30)} />
-            <FilterButton label={l ? '60+ ימים' : '60+ дней'} active={absentFilter === 60} onClick={() => setAbsent(60)} />
-            <FilterButton label={l ? '90+ ימים' : '90+ дней'} active={absentFilter === 90} onClick={() => setAbsent(90)} />
+            <FilterButton label={t('broadcast.filterAll')} active={absentFilter === null} onClick={() => setAbsent(null)} />
+            <FilterButton label={t('broadcast.filter30')} active={absentFilter === 30}   onClick={() => setAbsent(30)} />
+            <FilterButton label={t('broadcast.filter60')} active={absentFilter === 60}   onClick={() => setAbsent(60)} />
+            <FilterButton label={t('broadcast.filter90')} active={absentFilter === 90}   onClick={() => setAbsent(90)} />
           </div>
 
           {/* Выбрать всех / очистить */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-500 dark:text-slate-400">
-              {l ? `נבחרו ${selected.size}` : `Выбрано ${selected.size}`}
+              {t('broadcast.selectedCount', { count: selected.size })}
               {limitStatus && selected.size > 0 && ` / ${limitStatus.remaining}`}
             </span>
             <div className="flex gap-2">
               <button onClick={selectAll} className="text-xs text-blue-600 hover:underline font-medium">
-                {l ? 'בחר הכל' : 'Выбрать всех'}
+                {t('broadcast.selectAll')}
               </button>
               {selected.size > 0 && (
                 <button onClick={clearAll} className="text-xs text-red-500 hover:underline">
-                  {l ? 'נקה' : 'Очистить'}
+                  {t('broadcast.clearSelection')}
                 </button>
               )}
             </div>
@@ -295,16 +290,16 @@ export default function BroadcastPage() {
           ))}
           {!isLoading && filtered.map(c => (
             <ClientRow
-              key={c.id} client={c}
+              key={c.id}
+              client={c}
               selected={selected.has(c.id)}
               onToggle={() => toggleClient(c.id)}
-              l={l}
             />
           ))}
           {!isLoading && filtered.length === 0 && (
             <div className="text-center py-12 text-gray-400 dark:text-slate-500">
               <Users size={32} className="mx-auto mb-2 opacity-40" />
-              <p className="text-sm">{l ? 'לא נמצאו לקוחות' : 'Клиенты не найдены'}</p>
+              <p className="text-sm">{t('broadcast.noClients')}</p>
             </div>
           )}
         </div>
@@ -313,20 +308,20 @@ export default function BroadcastPage() {
       {/* ── Правая колонка: сообщение и отправка ── */}
       <div className="flex-1 flex flex-col p-5 lg:p-8 bg-gray-50 dark:bg-slate-900">
         <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-200 mb-4">
-          {l ? 'הודעה לשליחה' : 'Текст сообщения'}
+          {t('broadcast.messageTitle')}
         </h2>
 
         <textarea
           value={message}
           onChange={e => setMessage(e.target.value)}
-          placeholder={l ? 'כתוב את ההודעה שלך כאן...' : 'Напишите сообщение здесь...'}
+          placeholder={t('broadcast.messagePlaceholder')}
           rows={6}
           className="w-full p-4 text-sm rounded-2xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 focus:outline-none focus:border-blue-400 resize-none mb-3"
           dir="auto"
         />
 
         <p className="text-xs text-gray-400 dark:text-slate-500 mb-6">
-          {l ? '* ההודעה תישלח לכל הלקוחות שנבחרו' : '* Сообщение будет отправлено всем выбранным клиентам'}
+          {t('broadcast.messageNote')}
         </p>
 
         {/* Итог выбора */}
@@ -334,7 +329,7 @@ export default function BroadcastPage() {
           <div className="flex items-center gap-3 mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
             <Users size={16} className="text-blue-500 flex-shrink-0" />
             <p className="text-sm text-blue-700 dark:text-blue-300">
-              {l ? `${selected.size} לקוחות נבחרו לשליחה` : `Выбрано ${selected.size} клиентов для отправки`}
+              {t('broadcast.selectedSummary', { count: selected.size })}
             </p>
           </div>
         )}
@@ -345,13 +340,13 @@ export default function BroadcastPage() {
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle2 size={18} className="text-green-500" />
               <span className="font-semibold text-green-700 dark:text-green-300">
-                {l ? 'הרשימה נשלחה!' : 'Рассылка отправлена!'}
+                {t('broadcast.resultTitle')}
               </span>
             </div>
             <div className="text-sm text-green-700 dark:text-green-400 space-y-0.5">
-              <p>✅ {l ? `נשלחו: ${result.sent}` : `Отправлено: ${result.sent}`}</p>
-              {result.failed > 0 && <p>❌ {l ? `נכשלו: ${result.failed}` : `Ошибок: ${result.failed}`}</p>}
-              {result.skipped > 0 && <p>⏭️ {l ? `דולגו (מגבלה): ${result.skipped}` : `Пропущено (лимит): ${result.skipped}`}</p>}
+              <p>✅ {t('broadcast.resultSent',    { count: result.sent })}</p>
+              {result.failed  > 0 && <p>❌ {t('broadcast.resultFailed',  { count: result.failed })}</p>}
+              {result.skipped > 0 && <p>⏭️ {t('broadcast.resultSkipped', { count: result.skipped })}</p>}
             </div>
           </div>
         )}
@@ -373,18 +368,14 @@ export default function BroadcastPage() {
             <Send size={16} />
           )}
           {sending
-            ? (l ? 'שולח...' : 'Отправляем...')
-            : (l ? `שלח ל-${selected.size} לקוחות` : `Отправить ${selected.size} клиентам`)}
+            ? t('broadcast.sending')
+            : t('broadcast.sendBtn', { count: selected.size })}
         </button>
 
         {/* Предупреждение о лимите WhatsApp */}
         <div className="mt-6 flex items-start gap-2 text-xs text-gray-400 dark:text-slate-500">
           <Clock size={12} className="flex-shrink-0 mt-0.5" />
-          <span>
-            {l
-              ? 'WhatsApp מגביל שליחה המונית ל-30 הודעות ב-24 שעות. המגבלה מתאפסת כל יום.'
-              : 'WhatsApp ограничивает рассылку до 30 сообщений в 24 часа. Лимит сбрасывается каждый день.'}
-          </span>
+          <span>{t('broadcast.limitNote')}</span>
         </div>
       </div>
     </div>

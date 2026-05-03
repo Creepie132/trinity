@@ -16,7 +16,9 @@ import { DemoLanguagePicker, useDemoLanguagePicker } from '@/components/demo/Dem
 import { WaNotificationProvider } from '@/components/wa/WaNotificationProvider'
 import { SiteOrdersRealtimeProvider } from '@/components/providers/SiteOrdersRealtimeProvider'
 import { ClientProviders } from '@/components/providers/ClientProviders'
-import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext'
+// LanguageProvider живёт в корневом layout.tsx (с initialLocale из БД).
+// DashboardShell не дублирует его — useLanguage() работает через корневой контекст.
+import { useLanguage } from '@/contexts/LanguageContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
 import { useBranch } from '@/contexts/BranchContext'
@@ -221,18 +223,18 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 }
 
 // ─── DashboardShell — публичный экспорт ──────────────────────────────────────
-// NOTE: workerMode удалён. /worker/* изолирован в src/app/(worker)/layout.tsx
-// и рендерит WorkerShellWrapper → WorkerShellInner напрямую.
+// LanguageProvider намеренно отсутствует: он живёт в корневом layout.tsx
+// и получает initialLocale из БД через getUserPreferences().
+// Дублировать его здесь означало бы создать вложенный контекст без initialLocale,
+// что могло вызвать флаш языка при несовпадении localStorage и БД.
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <BranchProvider>
-      <LanguageProvider>
-        <ThemeProvider>
-          <DashboardInner>
-            {children}
-          </DashboardInner>
-        </ThemeProvider>
-      </LanguageProvider>
+      <ThemeProvider>
+        <DashboardInner>
+          {children}
+        </DashboardInner>
+      </ThemeProvider>
     </BranchProvider>
   )
 }

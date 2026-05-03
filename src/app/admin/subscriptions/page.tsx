@@ -10,11 +10,12 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
-import { Shield, CheckCircle, XCircle, Users, Package, Plus, Mail, Send, Loader2, ChevronRight, X, Pencil, CreditCard } from 'lucide-react'
+import { Shield, CheckCircle, XCircle, Users, Package, Plus, Mail, Send, Loader2, ChevronRight, X, Pencil, CreditCard, TrendingUp } from 'lucide-react'
 import { MODULES } from '@/lib/modules-config'
 import { EditOrganizationModal } from '@/components/modals/other/EditOrganizationModal'
 import Modal from '@/components/ui/Modal'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { ProrateModal } from '@/components/modals/admin/ProrateModal'
 
 interface Organization {
   id: string
@@ -94,6 +95,10 @@ export default function AdminSubscriptionsPage() {
   const [autopayBillingDate, setAutopayBillingDate] = useState<string>('')
   const [autopayLoading, setAutopayLoading] = useState(false)
   const [autopaySuccess, setAutopaySuccess] = useState<{ email: string } | null>(null)
+
+  // Prorate modal
+  const [prorateModalOpen, setProrateModalOpen] = useState(false)
+  const [prorateOrg, setProrateOrg] = useState<Organization | null>(null)
 
   const t = {
     he: {
@@ -441,6 +446,11 @@ export default function AdminSubscriptionsPage() {
                 <CreditCard className="w-4 h-4 flex-shrink-0" />
                 <span>{language === 'he' ? 'חיבור תשלום אוטומטי' : 'Автоплатёж'}</span>
               </button>
+              <button onClick={() => { setProrateOrg(org); setProrateModalOpen(true); setSelectedOrgSheet(null) }}
+                className={`py-2.5 px-3 rounded-xl bg-violet-600 text-white font-medium text-sm hover:bg-violet-700 transition-colors flex items-center justify-center gap-1.5 ${isDesktop ? 'flex-[1.5]' : 'w-full'}`}>
+                <TrendingUp className="w-4 h-4 flex-shrink-0" />
+                <span>{language === 'he' ? 'שינוי תכנית' : 'Сменить план'}</span>
+              </button>
               <button onClick={() => { handleExtend(org); setSelectedOrgSheet(null) }}
                 className={`py-2.5 px-2 rounded-xl bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-700 transition-colors ${isDesktop ? 'flex-1' : 'w-full'}`}>
                 {t.extend}
@@ -584,6 +594,8 @@ export default function AdminSubscriptionsPage() {
 
       {/* Edit Organization Modal */}
       <EditOrganizationModal isOpen={editOrgModalOpen} onClose={() => { setEditOrgModalOpen(false); setOrgToEdit(null) }} organization={orgToEdit} onSaved={loadData} />
+
+      <ProrateModal open={prorateModalOpen} org={prorateOrg} onClose={() => { setProrateModalOpen(false); setProrateOrg(null) }} onSuccess={loadData} />
 
       {/* FAB */}
       <SubscriptionsFab onInvite={() => setInviteModalOpen(true)} language={language} />

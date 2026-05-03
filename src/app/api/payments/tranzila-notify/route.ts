@@ -65,8 +65,13 @@ export async function POST(request: NextRequest) {
 
   const responseCode  = body['Response']
   const orgId         = body['cField1']
+  const cField2       = body['cField2'] ?? ''   // e.g. "plan_change:pro:249"
   const transactionId = body['ConfirmationCode'] || body['index']
   const amount        = parseFloat(body['sum'] ?? '0')
+
+  // Detect proration plan-change payment (one-time charge for upgrade)
+  const planChangeMatch = cField2.match(/^plan_change:(\w+):(\d+(\.\d+)?)$/)
+  const isPlanChange    = !!planChangeMatch
 
   console.log('[tranzila-notify] Received:', { responseCode, orgId, transactionId, amount })
 
@@ -93,6 +98,19 @@ export async function POST(request: NextRequest) {
   nextBilling.setDate(nextBilling.getDate() + 30)
   const nextBillingStr = nextBilling.toISOString().split('T')[0]
 
+  // Если это prorated charge за смену плана — применяем новый план
+  const planChangeUpdates: Record<string, any> = {}
+  if (isPlanChange && planChangeMatch) {
+    const newPlan  = planChangeMatch[1]
+    const newPrice = parseFloat(planChangeMatch[2])
+    planChangeUpdates.plan              = newPlan
+    planChangeUpdates.billing_amount    = newPrice
+    planChangeUpdates.pending_plan      = null
+    planChangeUpdates.pending_plan_price = null
+    planChangeUpdates.pending_plan_date  = null
+    console.log('[tranzila-notify] Plan change applied:', newPlan, newPrice)
+  }
+
   const { error } = await supabase
     .from('organizations')
     .update({
@@ -100,6 +118,7 @@ export async function POST(request: NextRequest) {
       billing_status:          'paid',
       billing_due_date:        nextBillingStr,
       subscription_expires_at: new Date(nextBilling.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+      ...planChangeUpdates,
     })
     .eq('id', orgId)
 

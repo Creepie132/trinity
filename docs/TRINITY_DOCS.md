@@ -4994,3 +4994,52 @@ Build чистый: 248 страниц, 0 ошибок TypeScript.
 #### Коммиты
 - `feat_proration` (94b21c2)
 - `feat_proration_v2_with_confirmation` (78a51fb)
+
+
+---
+
+### 03.05.2026 — Billing-Based Access Control (Paywall)
+
+#### Что добавлено
+Полноценная система автоматической блокировки доступа при неактивной подписке с красивым UI и авто-разблокировкой через Supabase Realtime.
+
+#### Архитектура
+
+**Уровни защиты (двойная блокировка):**
+1. **Middleware (фронтенд)** — при каждом запросе к защищённым роутам проверяет `subscription_status`. Кэш 5 минут в `trinity_sub_ok` cookie. При истечении → редирект на `/subscription-expired` + cookie `trinity_paywall_data` с plan/amount.
+2. **`checkAuth()` API guard** — блокирует на уровне Server Actions/API-роутов (HTTP 402). Нельзя обойти через DevTools.
+
+**Realtime авто-разблокировка:**
+- `SubscriptionLock` подписан на `postgres_changes` на таблицу `organizations` (фильтр по org_id)
+- При `subscription_status → active` → инвалидирует кэш (`/api/billing/invalidate`) → редирект на `/dashboard` за 1.8 секунды
+- Без перезагрузки страницы
+
+**Flow оплаты:**
+1. Пользователь видит `SubscriptionLock` экран
+2. Нажимает "Оплатить" → POST `/api/billing/paywall-link` → Tranzila iframe URL → открывается в новой вкладке
+3. После оплаты Tranzila шлёт webhook → `subscription_status = 'active'`
+4. Realtime trigger → экран авто-разблокируется
+
+#### Новые файлы
+- `src/components/billing/SubscriptionLock.tsx` — полноэкранный paywall компонент (dark mode, mesh gradients, Rubik, RTL/LTR, Realtime)
+- `src/app/api/billing/paywall-link/route.ts` — генерирует Tranzila ссылку подписки (публичный для залогиненных без активной подписки)
+- `src/app/api/billing/invalidate/route.ts` — инвалидирует `trinity_sub_ok` cookie
+
+#### Изменённые файлы
+- `middleware.ts` — добавлен `trinity_paywall_data` cookie при redirect, `plan` в SELECT, `/api/billing/paywall-link` в PUBLIC_PATH_PREFIXES
+- `src/app/subscription-expired/page.tsx` — упрощён до `<SubscriptionLock />` враппера
+- `src/lib/api-auth.ts` — добавлен billing guard в `checkAuth()` (HTTP 402 при неактивной подписке)
+- `src/app/api/payments/tranzila/webhook/route.ts` — исправлен `subscription_plan` → `plan`, добавлен try/catch Realtime broadcast
+
+#### Безопасность
+- `/api/billing/paywall-link` — требует auth (залогинен), НЕ требует активной подписки
+- `/api/billing/invalidate` — требует auth, только удаляет cookie
+- Billing guard в `checkAuth()` — все API-роуты через `checkAuth()`/`checkAuthAndFeature()` автоматически защищены
+- Admins (`is_admin=true`) обходят billing guard
+
+#### Realtime
+- Таблица `organizations` уже была в `supabase_realtime` publication — ничего менять не нужно
+- Канал: `billing:{org_id}`, filter: `id=eq.{orgId}`, event: `UPDATE`
+
+#### Коммит
+- `feat: billing paywall system` (6c30423)

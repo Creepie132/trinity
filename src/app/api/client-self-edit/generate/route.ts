@@ -1,29 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
+import { ratelimitStrict } from '@/lib/ratelimit'
 
 /**
  * POST /api/client-self-edit/generate
  * Body: { client_id: string }
- * Генерирует 24-часовой токен для self-edit ссылки.
- * Вызывается из CRM (авторизованный запрос).
+ *
+ * Rate limit: 5 генераций в минуту на user_id (ratelimitStrict, sliding window).
+ * Если Upstash не настроен — mock разрешает всё (graceful degradation).
  */
 export async function POST(req: NextRequest) {
   try {
     const auth = await getAuthContext(req)
     if ('error' in auth) return auth.error
 
-    const { orgId } = auth
+    const { orgId, user } = auth
+
+    // ── Rate limit: 5/мин на user_id ─────────────────────────────────────────
+    const rlKey = `generate-edit-link:${user.id}`
+    const { success: rlSuccess } = await ratelimitStrict.limit(rlKey)
+    if (!rlSuccess) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait before generating another link.' },
+        { status: 429, headers: { 'Retry-After': '60' } }
+      )
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const body = await req.json()
     const { client_id } = body as { client_id?: string }
 
-    if (!client_id) {
+    if (!client_id || typeof client_id !== 'string') {
       return NextResponse.json({ error: 'client_id is required' }, { status: 400 })
     }
 
     const supabase = createSupabaseServiceClient()
 
-    // Убеждаемся что клиент принадлежит этой org
+    // Убеждаемся что клиент принадлежит этой org (безопасность: нельзя генерировать
+    // ссылки для клиентов чужой org даже с валидной сессией)
     const { data: client, error: clientErr } = await supabase
       .from('clients')
       .select('id, org_id, first_name, last_name')
@@ -32,6 +47,12 @@ export async function POST(req: NextRequest) {
 
     if (clientErr || !client) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+    }
+
+    // Дополнительная проверка: org клиента должна совпадать с org пользователя
+    // (защита от IDOR — передать client_id из чужой org)
+    if (client.org_id !== orgId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
     // Деактивируем старые токены этого клиента

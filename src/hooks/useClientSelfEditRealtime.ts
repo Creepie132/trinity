@@ -1,25 +1,28 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 
 /**
  * useClientSelfEditRealtime
- * Подписывается на изменения в таблице `clients` для конкретной org.
- * Когда клиент обновляет профиль через self-edit ссылку — показывает toast.
  *
- * Использование (в dashboard layout или на странице клиентов):
- *   useClientSelfEditRealtime(orgId, locale)
+ * Подписывается на UPDATE в таблице `clients` для org.
+ * При обновлении через self-edit ссылку — показывает кликабельный toast
+ * с переходом в карточку клиента.
+ *
+ * Защита от ложных срабатываний:
+ * - Проверяем что updated_at < 10 секунд назад (игнорируем при реконнекте)
+ * - Подписка фильтрована по org_id на уровне Supabase Realtime
  */
 export function useClientSelfEditRealtime(orgId: string | null, locale: 'he' | 'ru' = 'he') {
+  const router = useRouter()
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   useEffect(() => {
     if (!orgId) return
 
-    // Подписываемся на UPDATE в таблице clients для нашей org
-    // Фильтруем по org_id чтобы не получать чужие события
     const channel = supabase
       .channel(`client-self-edit:${orgId}`)
       .on(
@@ -31,26 +34,39 @@ export function useClientSelfEditRealtime(orgId: string | null, locale: 'he' | '
           filter: `org_id=eq.${orgId}`,
         },
         (payload) => {
-          const updated = payload.new as { first_name?: string; last_name?: string; updated_at?: string }
+          const updated = payload.new as {
+            id?: string
+            first_name?: string
+            last_name?: string
+            updated_at?: string
+          }
 
-          // Показываем только если запись была обновлена в последние 10 секунд
-          // (не показываем старые события при реконнекте)
+          // Показываем только свежие события (< 10 сек)
           if (updated.updated_at) {
             const secondsAgo = (Date.now() - new Date(updated.updated_at).getTime()) / 1000
             if (secondsAgo > 10) return
           }
 
-          const name = `${updated.first_name ?? ''} ${updated.last_name ?? ''}`.trim() || (locale === 'he' ? 'לקוח' : 'Клиент')
+          const clientId = updated.id
+          const name = `${updated.first_name ?? ''} ${updated.last_name ?? ''}`.trim()
+            || (locale === 'he' ? 'לקוח' : 'Клиент')
 
+          // Кликабельный toast — клик переводит в карточку клиента
           toast.success(
             locale === 'he'
               ? `✅ ${name} עדכן/ה את הפרופיל`
               : `✅ Клиент ${name} обновил профиль`,
             {
               description: locale === 'he'
-                ? 'הפרטים עודכנו בהצלחה'
-                : 'Данные обновлены в CRM',
-              duration: 6000,
+                ? 'לחץ לפתיחת הפרופיל'
+                : 'Нажмите, чтобы открыть карточку',
+              duration: 8000,
+              action: clientId
+                ? {
+                    label: locale === 'he' ? 'פתח ←' : 'Открыть →',
+                    onClick: () => router.push(`/clients/${clientId}`),
+                  }
+                : undefined,
             }
           )
         }
@@ -63,5 +79,5 @@ export function useClientSelfEditRealtime(orgId: string | null, locale: 'he' | '
       supabase.removeChannel(channel)
       channelRef.current = null
     }
-  }, [orgId, locale])
+  }, [orgId, locale, router])
 }

@@ -20,6 +20,7 @@
 import { useEffect, useRef, useState, ReactNode, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
+import { useScrollLock } from '@/hooks/useScrollLock'
 
 interface ModalBottomSheetProps {
   open: boolean
@@ -68,21 +69,16 @@ export function ModalBottomSheet({
   useEffect(() => { setMounted(true) }, [])
 
 
-  // ── Open / close ─────────────────────────────────────────────────────────
+  // ── Scroll lock (iOS-safe через useScrollLock) ────────────────────────────
+  useScrollLock(open)
+
+  // ── Open / close animation ────────────────────────────────────────────────
   useEffect(() => {
     if (open) {
-      document.body.style.overflow    = 'hidden'
-      document.body.style.touchAction = 'none'
       setAnimating(true)
       requestAnimationFrame(() => setVisible(true))
     } else {
       setVisible(false)
-      document.body.style.overflow    = ''
-      document.body.style.touchAction = ''
-    }
-    return () => {
-      document.body.style.overflow    = ''
-      document.body.style.touchAction = ''
     }
   }, [open, setVisible])
 

@@ -1,3 +1,34 @@
+/* ===== SCROLL CHAINING PROTECTION ===================================
+   Предотвращает прокрутку фона (Scroll Chaining) когда открыты
+   модальные окна или drawer'ы.
+
+   overscroll-behavior: contain — нативная защита:
+     - останавливает цепочку прокрутки на этом элементе
+     - работает на Android Chrome / Desktop
+     - НЕ работает на iOS Safari (там нужен useScrollLock с position:fixed)
+
+   Применяем к оверлеям и скроллируемому контенту модалок.
+================================================================== */
+
+/* Оверлеи (backdrop) */
+[data-radix-dialog-overlay],
+[data-radix-sheet-overlay],
+.trinity-overlay {
+  overscroll-behavior: contain;
+}
+
+/* Скроллируемый контент внутри модалок */
+[role="dialog"],
+[aria-modal="true"] {
+  overscroll-behavior: contain;
+}
+
+/* Когда body заблокирован useScrollLock на iOS —
+   предотвращаем любой bounce-эффект */
+body[data-scroll-y] {
+  overscroll-behavior: none;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

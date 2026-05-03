@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface ModalWrapperProps {
   isOpen: boolean;
@@ -16,17 +17,8 @@ export default function ModalWrapper({ isOpen, onClose, children }: ModalWrapper
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
+  // iOS-safe блокировка скролла фона
+  useScrollLock(isOpen);
 
   if (!isOpen || !mounted) return null;
 

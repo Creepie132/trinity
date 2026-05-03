@@ -8,6 +8,7 @@ import { ModalType } from '@/store/useModalStore'
 import { usePinnedModals } from '@/store/usePinnedModals'
 import { X, GripHorizontal, Pin, PinOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useScrollLock } from '@/hooks/useScrollLock'
 
 interface BaseModalProps {
   open: boolean
@@ -30,6 +31,10 @@ export function BaseModal({
   const handleRef = useRef<HTMLDivElement>(null)
   // x/y — текущее смещение translate3d; maxX/maxY — границы, кешируются при mousedown
   const dragState = useRef({ dragging: false, startMouseX: 0, startMouseY: 0, startX: 0, startY: 0, x: 0, y: 0, maxX: 0, maxY: 0 })
+
+  // Scroll lock — блокируем прокрутку фона когда модалка открыта и не закреплена
+  // (закреплённые модалки — PiP-режим, фон нужен)
+  useScrollLock(open && !pinned_)
 
   // Применяем translate3d — единственный способ двигать элемент без layout
   const applyPos = useCallback((x: number, y: number) => {

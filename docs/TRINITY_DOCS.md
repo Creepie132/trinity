@@ -5119,3 +5119,33 @@ Build чистый: 248 страниц, 0 ошибок TypeScript.
 
 #### Регрессия
 Нет. Оба исправления — чисто аддитивные / defensive. Build чистый (6f52c90).
+
+---
+
+### 03.05.2026 — Billing: унификация источника правды для планов (коммит 201354b)
+
+#### Проблема
+Три разных локальных словаря планов в разных файлах (`PLAN_FEATURES`, `PLAN_CONFIG`, `PLAN_MODULES`) с несинхронизированными ключами (`basic` vs `base`) и разным составом модулей. Четыре точки активации подписки не обновляли `features.modules` при повторных/рекуррентных оплатах.
+
+#### Что сделано
+
+**Новый файл `src/lib/billing-plans.ts`** — единый источник правды:
+- `PLAN_MODULES` — модули для `basic / pro / enterprise`
+- `PLAN_PRICES` — цены планов
+- `normalizePlan(plan)` — нормализует `'base'` → `'basic'`, `null` → `'basic'`
+- `getPlanModules(plan)` — всегда возвращает валидный объект модулей
+- `getPlanPrice(plan)` — цена плана
+
+**Обновлены все точки активации подписки:**
+
+| Файл | Что исправлено |
+|---|---|
+| `payments/tranzila/webhook` | Удалён локальный `PLAN_FEATURES`, импорт из `billing-plans` |
+| `payments/tranzila-notify` | Добавлено обновление `features.modules` при рекуррентном списании и при plan_change |
+| `payments/tranzila-success` | Добавлено обновление `features.modules` в GET и POST обработчиках |
+| `webhooks/tranzila` | Удалён локальный `PLAN_CONFIG`, импорт из `billing-plans` |
+| `admin/organizations/[orgId]/activate` | Удалён локальный `PLAN_MODULES`, импорт из `billing-plans` |
+| `plan-change/confirm` | `applyPlanChange()` теперь обновляет `features.modules` |
+
+#### Регрессия
+Нет. `normalizePlan('base') → 'basic'` — обратная совместимость сохранена. Build чистый, 0 TS-ошибок, 251/251 страниц.

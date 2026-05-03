@@ -1,5 +1,5 @@
 ﻿import type { Metadata } from "next";
-import { Inter, Assistant } from "next/font/google";
+import { Inter, Rubik } from "next/font/google";
 import "./globals.css";
 import { cookies, headers } from "next/headers";
 import { QueryProvider } from "@/components/providers/QueryProvider";
@@ -13,10 +13,12 @@ const inter = Inter({
   display: 'swap',
   variable: '--font-inter',
 });
-const assistant = Assistant({ 
-  subsets: ["hebrew", "latin"], 
+// Rubik — стандарт Trinity для иврита (Hebrew + Latin, weights 400/500/700/800)
+const rubik = Rubik({
+  subsets: ['hebrew', 'latin'],
+  weight: ['400', '500', '700', '800'],
   display: 'swap',
-  variable: '--font-assistant',
+  variable: '--font-rubik',
 });
 
 const BASE_URL = 'https://ambersol.co.il'
@@ -198,7 +200,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={dir} className="light" suppressHydrationWarning>
       <head>
-        <link rel="manifest" href="/manifest.json" />
+        <link rel="manifest" href="/api/manifest" />
         <link rel="preconnect" href="https://tjryzcqvsavtllahjyrj.supabase.co" />
         <link rel="dns-prefetch" href="https://tjryzcqvsavtllahjyrj.supabase.co" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
@@ -212,7 +214,7 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={`${inter.variable} ${assistant.variable} font-sans`} suppressHydrationWarning>
+      <body className={`${inter.variable} ${rubik.variable} font-sans`} suppressHydrationWarning>
         <QueryProvider>
           <LanguageProvider initialLocale={locale}>
             {children}

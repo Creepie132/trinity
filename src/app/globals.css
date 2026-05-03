@@ -42,11 +42,11 @@
   direction: ltr;
 }
 
-/* Hebrew font — force Assistant for all RTL/Hebrew content */
+/* Hebrew font — Rubik (стандарт Trinity) для всего RTL/Hebrew контента */
 :lang(he),
 [lang="he"] *,
 [dir="rtl"] * {
-  font-family: var(--font-assistant), 'Assistant', 'Arial Hebrew', Arial, sans-serif !important;
+  font-family: var(--font-rubik), 'Rubik', 'Arial Hebrew', Arial, sans-serif !important;
 }
 
 @layer base {

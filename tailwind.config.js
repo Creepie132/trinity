@@ -16,8 +16,8 @@ module.exports = {
     },
     extend: {
       fontFamily: {
-        sans: ['var(--font-inter)', 'var(--font-assistant)', 'Arial', 'sans-serif'],
-        hebrew: ['var(--font-assistant)', 'Arial Hebrew', 'Arial', 'sans-serif'],
+        sans:   ['var(--font-inter)', 'var(--font-rubik)', 'Arial', 'sans-serif'],
+        hebrew: ['var(--font-rubik)', 'Arial Hebrew', 'Arial', 'sans-serif'],
       },
       colors: {
         border: 'hsl(var(--border))',

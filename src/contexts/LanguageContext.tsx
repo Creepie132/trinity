@@ -919,6 +919,27 @@ const translations: Record<Language, Record<string, string>> = {
     'errors.noEmail': 'אין כתובת אימייל ללקוח',
     'errors.noContactInfo': 'אין פרטי התקשרות ללקוח',
     'errors.somethingWentWrong': 'משהו השתבש',
+
+    // Login page
+    'login.backToHome': 'חזור לדף הבית',
+    'login.welcome': 'ברוכים הבאים',
+    'login.subtitle': 'התחבר כדי להמשיך למערכת',
+    'login.withGoogle': 'כניסה עם Google',
+    'login.connecting': 'מתחבר...',
+    'login.orDivider': 'או',
+    'login.withEmail': 'כניסה עם אימייל וסיסמה',
+    'login.emailPlaceholder': 'אימייל',
+    'login.passwordPlaceholder': 'סיסמה',
+    'login.signIn': 'כניסה',
+    'login.signingIn': 'נכנס...',
+    'login.backToGoogle': 'חזרה לכניסה עם Google',
+    'login.footerDesc': 'מערכת ניהול לקוחות מתקדמת לעסקים',
+    'login.secureConnection': '🔒 חיבור מאובטח',
+    'login.hebrewSupport': '🇮🇱 תמיכה בעברית',
+    'login.error.invalidCredentials': 'אימייל או סיסמה שגויים',
+    'login.error.fillFields': 'נא למלא אימייל וסיסמה',
+    'login.error.emailNotConfirmed': 'האימייל לא אושר — פנה לתמיכה',
+    'login.error.generic': 'שגיאה בהתחברות — נסה שוב',
     
     // Error page
     'error.message': 'משהו השתבש. אנא נסה שוב או פנה לתמיכה.',
@@ -1827,6 +1848,27 @@ const translations: Record<Language, Record<string, string>> = {
     'errors.noEmail': 'У клиента нет адреса электронной почты',
     'errors.noContactInfo': 'У клиента нет контактной информации',
     'errors.somethingWentWrong': 'Что-то пошло не так',
+
+    // Login page
+    'login.backToHome': 'На главную',
+    'login.welcome': 'Добро пожаловать',
+    'login.subtitle': 'Войдите, чтобы продолжить работу',
+    'login.withGoogle': 'Войти через Google',
+    'login.connecting': 'Подключаемся...',
+    'login.orDivider': 'или',
+    'login.withEmail': 'Войти по email и паролю',
+    'login.emailPlaceholder': 'Email',
+    'login.passwordPlaceholder': 'Пароль',
+    'login.signIn': 'Войти',
+    'login.signingIn': 'Вхожу...',
+    'login.backToGoogle': 'Вернуться к входу через Google',
+    'login.footerDesc': 'Продвинутая CRM-система для бизнеса',
+    'login.secureConnection': '🔒 Защищённое соединение',
+    'login.hebrewSupport': '🇮🇱 Поддержка иврита и русского',
+    'login.error.invalidCredentials': 'Неверный email или пароль',
+    'login.error.fillFields': 'Введите email и пароль',
+    'login.error.emailNotConfirmed': 'Email не подтверждён — обратитесь в поддержку',
+    'login.error.generic': 'Ошибка входа — попробуйте ещё раз',
     
     // Error page
     'error.message': 'Что-то пошло не так. Пожалуйста, попробуйте снова или обратитесь в поддержку.',
@@ -1880,12 +1922,12 @@ export function LanguageProvider({ children, initialLocale }: { children: ReactN
     const html = document.documentElement
     html.setAttribute('lang', lang)
     html.setAttribute('dir', dir)
-    // Swap font class: Hebrew → Assistant, Russian → Inter
+    // Swap font class: Hebrew → Rubik, Russian → Inter
     if (lang === 'he') {
       html.classList.remove('font-inter')
-      html.classList.add('font-assistant')
+      html.classList.add('font-rubik')
     } else {
-      html.classList.remove('font-assistant')
+      html.classList.remove('font-rubik')
       html.classList.add('font-inter')
     }
   }

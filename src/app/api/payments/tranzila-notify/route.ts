@@ -103,12 +103,33 @@ export async function POST(request: NextRequest) {
   if (isPlanChange && planChangeMatch) {
     const newPlan  = planChangeMatch[1]
     const newPrice = parseFloat(planChangeMatch[2])
-    planChangeUpdates.plan              = newPlan
-    planChangeUpdates.billing_amount    = newPrice
-    planChangeUpdates.pending_plan      = null
+    planChangeUpdates.plan               = newPlan
+    planChangeUpdates.billing_amount     = newPrice
+    planChangeUpdates.pending_plan       = null
     planChangeUpdates.pending_plan_price = null
     planChangeUpdates.pending_plan_date  = null
     console.log('[tranzila-notify] Plan change applied:', newPlan, newPrice)
+  }
+
+  // Применяем доступные org_credits к текущему биллингу
+  let appliedCredit = 0
+  try {
+    const { data: credits } = await supabase
+      .from('org_credits')
+      .select('id, amount')
+      .eq('org_id', orgId)
+      .is('applied_at', null)
+      .gt('amount', 0)
+      .lte('expires_at', new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()) // не истёкшие
+
+    if (credits && credits.length > 0) {
+      appliedCredit = credits.reduce((s: number, c: any) => s + parseFloat(c.amount), 0)
+      const ids = credits.map((c: any) => c.id)
+      await supabase.from('org_credits').update({ applied_at: new Date().toISOString() }).in('id', ids)
+      console.log(`[tranzila-notify] Applied ₪${appliedCredit} credits for org:`, orgId)
+    }
+  } catch (creditErr) {
+    console.error('[tranzila-notify] Credit apply failed (non-fatal):', creditErr)
   }
 
   const { error } = await supabase

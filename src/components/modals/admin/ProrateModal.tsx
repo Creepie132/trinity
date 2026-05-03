@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { useLanguage } from '@/contexts/LanguageContext'
 import Modal from '@/components/ui/Modal'
 import { PLAN_PRICES, ProratePreview } from '@/lib/proration'
-import { ArrowUpCircle, ArrowDownCircle, MinusCircle, Loader2, TrendingUp } from 'lucide-react'
+import { ArrowUpCircle, ArrowDownCircle, MinusCircle, Loader2, TrendingUp, Copy, Check, CreditCard, Gift, ExternalLink } from 'lucide-react'
 
 interface Org {
   id: string
@@ -33,20 +33,23 @@ export function ProrateModal({ open, org, onClose, onSuccess }: Props) {
   const { language } = useLanguage()
   const isHe = language === 'he'
 
-  const [selectedPlan, setSelectedPlan] = useState<string>('pro')
-  const [customPrice, setCustomPrice]   = useState<string>('')
-  const [preview, setPreview]           = useState<ProratePreview | null>(null)
+  const [selectedPlan,  setSelectedPlan]  = useState<string>('pro')
+  const [customPrice,   setCustomPrice]   = useState<string>('')
+  const [preview,       setPreview]       = useState<(ProratePreview & { has_card_token?: boolean; card_last4?: string | null }) | null>(null)
   const [loadingPreview, setLoadingPreview] = useState(false)
-  const [applying, setApplying]         = useState(false)
+  const [applying,      setApplying]      = useState(false)
+  const [confirmUrl,    setConfirmUrl]    = useState<string | null>(null)
+  const [copied,        setCopied]        = useState(false)
 
-  const currentPlan  = org?.plan ?? 'base'
-  const currentPrice = org?.billing_amount ?? PLAN_PRICES[currentPlan] ?? 199
+  const currentPlan = org?.plan ?? 'base'
 
   useEffect(() => {
     if (!open || !org) return
     setSelectedPlan(currentPlan === 'base' ? 'pro' : currentPlan === 'pro' ? 'enterprise' : 'base')
     setCustomPrice('')
     setPreview(null)
+    setConfirmUrl(null)
+    setCopied(false)
   }, [open, org])
 
   useEffect(() => {
@@ -61,22 +64,20 @@ export function ProrateModal({ open, org, onClose, onSuccess }: Props) {
     try {
       const params = new URLSearchParams({ org_id: org.id, to_plan: selectedPlan })
       if (customPrice) params.set('to_price', customPrice)
-      const res = await fetch(`/api/admin/prorate?${params}`)
+      const res  = await fetch(`/api/admin/prorate?${params}`)
       const data = await res.json()
-      if (data.preview) setPreview(data.preview)
-    } catch { /* silent */ } finally {
-      setLoadingPreview(false)
-    }
+      if (data.preview) setPreview({ ...data.preview, has_card_token: data.has_card_token, card_last4: data.card_last4 })
+    } catch { /* silent */ } finally { setLoadingPreview(false) }
   }
 
-  const handleApply = async () => {
+  const handleSendRequest = async () => {
     if (!org || !preview) return
     setApplying(true)
     try {
-      const res = await fetch('/api/admin/prorate', {
-        method: 'POST',
+      const res  = await fetch('/api/admin/prorate', {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body:    JSON.stringify({
           org_id:   org.id,
           to_plan:  selectedPlan,
           to_price: customPrice ? parseFloat(customPrice) : undefined,
@@ -85,21 +86,23 @@ export function ProrateModal({ open, org, onClose, onSuccess }: Props) {
       const data = await res.json()
       if (!res.ok || !data.ok) throw new Error(data.error || 'Error')
 
-      if (data.type === 'upgrade' && data.payment_url) {
-        toast.success(isHe ? 'קישור תשלום נשלח ללקוח!' : 'Ссылка на оплату отправлена клиенту!')
-      } else if (data.type === 'downgrade_scheduled') {
-        toast.success(isHe ? `הורדת מנוי מתוזמנת ל-${preview.effectiveDate}` : `Downgrade запланирован на ${preview.effectiveDate}`)
-      } else {
-        toast.success(isHe ? 'עודכן בהצלחה' : 'Обновлено успешно')
-      }
-
-      onSuccess()
-      onClose()
+      setConfirmUrl(data.confirm_url)
+      toast.success(
+        data.email_sent
+          ? (isHe ? 'אימייל אישור נשלח ללקוח!' : 'Email с подтверждением отправлен клиенту!')
+          : (isHe ? 'קישור אישור נוצר' : 'Ссылка создана — у клиента нет email'),
+        { duration: 5000 }
+      )
     } catch (e: any) {
       toast.error(e.message || (isHe ? 'שגיאה' : 'Ошибка'))
-    } finally {
-      setApplying(false)
-    }
+    } finally { setApplying(false) }
+  }
+
+  const copyUrl = () => {
+    if (!confirmUrl) return
+    navigator.clipboard.writeText(confirmUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   if (!org) return null
@@ -116,6 +119,40 @@ export function ProrateModal({ open, org, onClose, onSuccess }: Props) {
     same:      'border-blue-200 bg-blue-50 dark:bg-blue-950/30',
   }
 
+  // ── Sent state ────────────────────────────────────────────────────────────
+  if (confirmUrl) {
+    return (
+      <Modal open={open} onClose={() => { onSuccess(); onClose() }} size="md">
+        <div className="p-1 text-center">
+          <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mx-auto mb-4">
+            <ExternalLink className="w-8 h-8 text-indigo-600" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+            {isHe ? 'קישור אישור נשלח!' : 'Ссылка подтверждения создана!'}
+          </h2>
+          <p className="text-sm text-gray-500 mb-5">
+            {isHe
+              ? 'הלקוח יקבל אימייל עם קישור אישור. הוא/היא יצטרכו לאשר את השינוי.'
+              : 'Клиент получит email со ссылкой подтверждения. Он должен поставить галочку и подтвердить.'}
+          </p>
+          <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 rounded-xl p-3 mb-5 text-left">
+            <span className="flex-1 text-xs text-gray-600 dark:text-gray-300 truncate">{confirmUrl}</span>
+            <button onClick={copyUrl} className="flex-shrink-0 p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+              {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-gray-400" />}
+            </button>
+          </div>
+          <button
+            onClick={() => { onSuccess(); onClose() }}
+            className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700"
+          >
+            {isHe ? 'סגור' : 'Закрыть'}
+          </button>
+        </div>
+      </Modal>
+    )
+  }
+
+  // ── Main form ─────────────────────────────────────────────────────────────
   return (
     <Modal open={open} onClose={onClose} size="md">
       <div className="p-1">
@@ -136,7 +173,7 @@ export function ProrateModal({ open, org, onClose, onSuccess }: Props) {
         <div className="mb-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
           <p className="text-xs text-gray-500 mb-1">{isHe ? 'תכנית נוכחית' : 'Текущий тариф'}</p>
           <p className="font-semibold text-gray-900 dark:text-white">
-            {currentPlan.toUpperCase()} — ₪{currentPrice}/мес
+            {currentPlan.toUpperCase()} — ₪{org.billing_amount ?? PLAN_PRICES[currentPlan] ?? 199}/мес
           </p>
         </div>
 
@@ -147,15 +184,12 @@ export function ProrateModal({ open, org, onClose, onSuccess }: Props) {
           </label>
           <div className="grid grid-cols-3 gap-2">
             {PLANS.map(p => (
-              <button
-                key={p.key}
-                onClick={() => { setSelectedPlan(p.key); setCustomPrice('') }}
+              <button key={p.key} onClick={() => { setSelectedPlan(p.key); setCustomPrice('') }}
                 className={`py-3 px-2 rounded-xl border-2 text-center transition-all ${
                   selectedPlan === p.key && !customPrice
                     ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30'
                     : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                }`}
-              >
+                }`}>
                 <p className="font-bold text-sm text-gray-900 dark:text-white">{p.label}</p>
                 <p className="text-xs text-gray-500">₪{p.price}</p>
               </button>
@@ -168,14 +202,10 @@ export function ProrateModal({ open, org, onClose, onSuccess }: Props) {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {isHe ? 'מחיר מותאם (₪/חודש)' : 'Кастомная цена (₪/мес)'}
           </label>
-          <input
-            type="number"
-            min={1}
-            value={customPrice}
+          <input type="number" min={1} value={customPrice}
             onChange={e => setCustomPrice(e.target.value)}
-            placeholder={isHe ? 'השאר ריק לשימוש במחיר סטנדרטי' : 'Оставить пустым = стандартная цена'}
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
+            placeholder={isHe ? 'ריק = מחיר סטנדרטי' : 'Пусто = стандартная цена'}
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
 
         {/* Preview */}
@@ -194,54 +224,50 @@ export function ProrateModal({ open, org, onClose, onSuccess }: Props) {
               </p>
             </div>
             {preview.type === 'upgrade' && preview.proratedAmount > 0 && (
-              <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-800">
+              <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-800 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {isHe ? 'חיוב חד-פעמי עכשיו' : 'Единовременный платёж сейчас'}
+                  <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5" />
+                    {preview.has_card_token
+                      ? (isHe ? `יחויב מכרטיס **** ${preview.card_last4}` : `Со карты **** ${preview.card_last4}`)
+                      : (isHe ? 'יישלח קישור לתשלום' : 'Отправим ссылку на оплату')}
                   </span>
-                  <span className="font-bold text-emerald-700 dark:text-emerald-400 text-lg">
-                    ₪{preview.proratedAmount}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm mt-1">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {isHe ? 'מ-' : 'С '}{preview.nextBillingDate}
-                  </span>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">
-                    ₪{preview.toPrice}/мес
-                  </span>
+                  <span className="font-bold text-emerald-700 text-lg">₪{preview.proratedAmount}</span>
                 </div>
               </div>
             )}
-            {preview.type === 'downgrade' && (
-              <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
-                {isHe
-                  ? 'אין חזר כספי — המנוי הנוכחי ממשיך עד סוף התקופה'
-                  : 'Возврат не делается — текущий период продолжается до конца'}
-              </p>
+            {preview.type === 'downgrade' && preview.creditAmount > 0 && (
+              <div className="mt-3 pt-3 border-t border-orange-200 dark:border-orange-800">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                    <Gift className="w-3.5 h-3.5" />
+                    {isHe ? `זיכוי לחיוב ב-${preview.nextBillingDate}` : `Кредит на ${preview.nextBillingDate}`}
+                  </span>
+                  <span className="font-bold text-indigo-600 text-lg">₪{preview.creditAmount}</span>
+                </div>
+              </div>
             )}
           </div>
         )}
 
+        {/* Info */}
+        <p className="text-xs text-gray-400 mb-4 text-center">
+          {isHe
+            ? 'יישלח אימייל ללקוח עם קישור אישור. השינוי ייכנס לתוקף רק לאחר אישורו.'
+            : 'Клиент получит email со ссылкой. Изменение вступит в силу только после его подтверждения.'}
+        </p>
+
         {/* Footer */}
         <div className="flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-          >
+          <button onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">
             {isHe ? 'ביטול' : 'Отмена'}
           </button>
-          <button
-            onClick={handleApply}
+          <button onClick={handleSendRequest}
             disabled={!preview || applying || loadingPreview || selectedPlan === currentPlan}
-            className="flex-[2] py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold disabled:opacity-50 hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
-          >
+            className="flex-[2] py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold disabled:opacity-50 hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2">
             {applying && <Loader2 className="w-4 h-4 animate-spin" />}
-            {preview?.type === 'upgrade'
-              ? (isHe ? 'שלח קישור תשלום' : 'Отправить ссылку на оплату')
-              : preview?.type === 'downgrade'
-              ? (isHe ? 'תזמן הורדת מנוי' : 'Запланировать downgrade')
-              : (isHe ? 'עדכן' : 'Обновить')}
+            {isHe ? 'שלח בקשת אישור ללקוח' : 'Отправить запрос клиенту'}
           </button>
         </div>
       </div>

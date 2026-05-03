@@ -3,10 +3,14 @@
  *
  * Логика:
  *   Upgrade   → клиент доплачивает за оставшиеся дни текущего периода.
- *               Новый тариф стартует СРАЗУ. Списание через Tranzila.
- *   Downgrade → новый тариф применяется со следующего периода.
- *               Возврат не делается (стандарт SaaS).
- *   Same plan → изменение суммы рекуррента без charge.
+ *               Автосписание с tranzila_card_token (если есть), иначе ссылка.
+ *               Новый тариф активируется СРАЗУ после подтверждения и оплаты.
+ *   Downgrade → кредит за неиспользованные дни (credit note) на следующий месяц.
+ *               Применяется как скидка к следующему биллингу.
+ *               Новый тариф применяется СРАЗУ.
+ *   Same      → просто обновить billing_amount.
+ *
+ * Клиент ВСЕГДА должен подтвердить смену плана (confirm_token).
  */
 
 export const PLAN_PRICES: Record<string, number> = {
@@ -25,9 +29,10 @@ export interface ProratePreview {
   toPrice:        number
   daysLeft:       number
   daysInPeriod:   number
-  proratedAmount: number   // сумма к оплате (0 при downgrade)
+  proratedAmount: number   // upgrade: сумма к доплате; downgrade: 0
+  creditAmount:   number   // downgrade: кредит на следующий месяц; upgrade: 0
   nextBillingDate: string  // ISO date
-  effectiveDate:  string   // когда вступает в силу (сегодня или nextBillingDate)
+  effectiveDate:  string   // когда вступает в силу (всегда сегодня)
   message_ru:     string
   message_he:     string
 }
@@ -76,16 +81,17 @@ export function calcProration(
     newPrice > oldPrice ? 'upgrade' :
     newPrice < oldPrice ? 'downgrade' : 'same'
 
-  // Prorated amount = разница в цене * доля оставшихся дней
-  const dailyDiff = (newPrice - oldPrice) / daysInPeriod
-  const proratedRaw = type === 'upgrade' ? dailyDiff * daysLeft : 0
-  const proratedAmount = Math.max(0, parseFloat(proratedRaw.toFixed(2)))
+  // Prorated:
+  //   upgrade  → доплата за оставшиеся дни = (newPrice - oldPrice) / 30 * daysLeft
+  //   downgrade → кредит за оставшиеся дни = (oldPrice - newPrice) / 30 * daysLeft
+  const dailyDiff = Math.abs(newPrice - oldPrice) / daysInPeriod
+  const proratedRaw = dailyDiff * daysLeft
 
-  const effectiveDate =
-    type === 'downgrade'
-      ? effectivePeriodEnd.toISOString().split('T')[0]
-      : today.toISOString().split('T')[0]
+  const proratedAmount = type === 'upgrade'   ? parseFloat(proratedRaw.toFixed(2)) : 0
+  const creditAmount   = type === 'downgrade' ? parseFloat(proratedRaw.toFixed(2)) : 0
 
+  // Новый план вступает в силу СРАЗУ (после подтверждения)
+  const effectiveDate = today.toISOString().split('T')[0]
   const nextBillingDate = effectivePeriodEnd.toISOString().split('T')[0]
 
   const fromLabel = fromPlan.charAt(0).toUpperCase() + fromPlan.slice(1)
@@ -97,8 +103,8 @@ export function calcProration(
       he: `שדרוג ${fromLabel} → ${toLabel}. תוספת עבור ${daysLeft} ימים: ₪${proratedAmount}. חיוב הבא ${nextBillingDate}: ₪${newPrice}.`,
     },
     downgrade: {
-      ru: `Downgrade ${fromLabel} → ${toLabel}. Текущий период продолжается. Новый тариф ₪${newPrice} вступает с ${effectiveDate}.`,
-      he: `הורדת מנוי ${fromLabel} → ${toLabel}. המנוי הנוכחי ממשיך. תעריף חדש ₪${newPrice} יכנס לתוקף מ-${effectiveDate}.`,
+      ru: `Downgrade ${fromLabel} → ${toLabel}. Кредит за ${daysLeft} дней: ₪${creditAmount} — будет вычтен из следующего счёта (${nextBillingDate}).`,
+      he: `הורדת מנוי ${fromLabel} → ${toLabel}. זיכוי עבור ${daysLeft} ימים: ₪${creditAmount} — יקוזז מהחיוב הבא (${nextBillingDate}).`,
     },
     same: {
       ru: `Тариф не изменился. Новая сумма ₪${newPrice} будет списана ${nextBillingDate}.`,
@@ -107,16 +113,9 @@ export function calcProration(
   }
 
   return {
-    type,
-    fromPlan,
-    toPlan,
-    fromPrice: oldPrice,
-    toPrice: newPrice,
-    daysLeft,
-    daysInPeriod,
-    proratedAmount,
-    nextBillingDate,
-    effectiveDate,
+    type, fromPlan, toPlan, fromPrice: oldPrice, toPrice: newPrice,
+    daysLeft, daysInPeriod, proratedAmount, creditAmount,
+    nextBillingDate, effectiveDate,
     message_ru: messages[type].ru,
     message_he: messages[type].he,
   }

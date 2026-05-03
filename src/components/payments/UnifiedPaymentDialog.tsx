@@ -472,7 +472,7 @@ export function UnifiedPaymentDialog({
     notes, description, safeData, queryClient,
     createPaymentLinkMutation, t,
     checkDetails, checkValid, bankDetails, bankValid, cashData, cashValid,
-    installmentConfig, clientToken,
+    installmentConfig, clientToken, linkInstallments,
   ])
 
   const handleCopyLink = useCallback(() => {

@@ -4761,3 +4761,67 @@ IP проверяется из `x-forwarded-for` (Vercel проксирует).
 
 ### Регрессия
 Нет. Билд чистый (244 страницы, 0 ошибок TypeScript).
+
+
+---
+
+## Changelog — май 2026
+
+### 03.05.2026 — Secure Client Self-Edit Module (коммит 8c4380e)
+
+#### Что сделано
+
+Реализован полный модуль самостоятельного редактирования профиля клиентом через временную ссылку.
+
+**1. База данных**
+- Новая таблица `client_edit_tokens`: `token (UUID)`, `client_id`, `org_id`, `expires_at` (24ч), `used_at`, `is_active`
+- RLS: владелец org может читать свои токены; запись — только через service role
+- Индекс по `token WHERE is_active = true`
+- Файл: `supabase/migrations/20260503_client_edit_tokens.sql`
+
+**2. API Routes (все в `/api/client-self-edit/`)**
+- `POST /generate` — создаёт токен (авторизованный, CRM-side). Деактивирует старые токены клиента.
+- `GET /token/[token]` — публичный, валидирует токен, возвращает данные клиента (без сессии).
+- `PATCH /token/[token]` — публичный, сохраняет изменения, деактивирует токен (одноразовый), запускает dispatchNotification.
+- `POST /avatar` — публичный, загружает WebP в Supabase Storage bucket `avatars` (путь `[client_id].webp`). Защита: проверяет активный токен для client_id.
+
+**3. Public Page `/edit-profile/[token]`**
+- Mobile-first, без CRM layout, полностью автономная
+- Двуязычная: иврит (RTL) + русский (LTR), автодетект из `navigator.language`, ручное переключение
+- Поля: имя, фамилия, телефон, email, дата рождения
+- Аватар: сжатие через Canvas API → WebP (max 800px, quality 0.7), превью до загрузки
+- Состояния: loading / ready / expired / success
+- Expired page: кастомный 404 с кнопкой связи
+- Нет зависимостей от CRM (не нужна авторизация)
+
+**4. CRM-интеграция**
+- `useClientSelfEditLink` — хук генерации ссылки + автокопирование в clipboard + toast
+- Кнопка `<Link2>` добавлена в `ClientDesktopPanel` в блок быстрых контактов (индиго)
+- `useClientSelfEditRealtime` — Supabase Realtime подписка на UPDATE в `clients` (фильтр по org_id). Toast.success при обновлении клиентом своего профиля.
+- Realtime хук подключён в `clients/page.tsx`
+
+#### Затронутые файлы
+- `src/app/api/client-self-edit/generate/route.ts` (новый)
+- `src/app/api/client-self-edit/token/[token]/route.ts` (новый)
+- `src/app/api/client-self-edit/avatar/route.ts` (новый)
+- `src/app/edit-profile/[token]/page.tsx` (новый)
+- `src/hooks/useClientSelfEditLink.ts` (новый)
+- `src/hooks/useClientSelfEditRealtime.ts` (новый)
+- `src/components/clients/ClientDesktopPanel.tsx` (кнопка)
+- `src/app/(dashboard)/clients/page.tsx` (realtime hook)
+- `supabase/migrations/20260503_client_edit_tokens.sql` (новый)
+
+#### После деплоя — обязательно вручную
+1. Применить миграцию в Supabase SQL Editor (файл выше)
+2. Создать bucket `avatars` в Supabase Storage (если не существует), установить public access
+3. Добавить шаблон `client_self_edit` в Edge Function `send-notification`
+
+#### Регрессия
+Нет. Build чистый: 246 страниц, 0 ошибок TypeScript.
+
+#### Безопасность
+- Токены одноразовые (деактивируются после PATCH)
+- TTL 24 часа, хранится в БД
+- Avatar upload защищён проверкой активного токена
+- Нет доступа к чужим клиентам (org_id изолирован)
+- Публичные endpoints не возвращают org_id или чувствительные данные

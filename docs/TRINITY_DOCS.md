@@ -5149,3 +5149,38 @@ Build чистый: 248 страниц, 0 ошибок TypeScript.
 
 #### Регрессия
 Нет. `normalizePlan('base') → 'basic'` — обратная совместимость сохранена. Build чистый, 0 TS-ошибок, 251/251 страниц.
+
+
+---
+
+### 03.05.2026 — fix(payments): Рассрочка Tranzila — исправление параметров iFrame (коммит 3963aa3)
+
+#### Проблема
+При создании ссылки на оплату с указанием количества платежей (рассрочка) Tranzila игнорировала выбор и формировала обычный одноразовый платёж на полную сумму.
+
+#### Root cause (два бага)
+
+**Баг 1 — неверное имя параметра:**
+В `createTranzilaPaymentLink` передавался `tashloumim` — параметр старого iFrame (CGI).
+В DirectNG (новый URL `directng.tranzila.com`) правильный параметр — `maxpay`.
+
+**Баг 2 — отсутствовал `cred_type`:**
+Tranzila DirectNG требует `cred_type=8` (Regular Installments) чтобы распознать режим рассрочки.
+Без него — одноразовый платёж независимо от остальных параметров.
+
+#### Изменённые файлы
+
+| Файл | Что изменено |
+|---|---|
+| `src/lib/tranzila.ts` | Заменён `tashloumim` на `cred_type: '8'` + `maxpay`. Добавлена двойная валидация (integer, диапазон [2,36]). |
+| `src/lib/validations.ts` | В `createPaymentSchema` добавлено поле `installments: z.coerce.number().int().min(2).max(36).optional().nullable()` |
+| `src/app/api/payments/create-link/route.ts` | `installments` теперь читается из валидированного `data` (Zod), не из `body` напрямую. `null ?? undefined` для типа. |
+
+#### Логика рассрочки (DirectNG)
+- `cred_type=8` — Regular Installments (обязателен)
+- `maxpay=N` — максимальное кол-во платежей, Tranzila сама делит сумму
+- НЕ передавать вместе с `npay`/`fpay`/`spay` (конфликт по документации)
+- Credit Installments (`cred_type=6`) — отдельный режим, требует авторизации банка клиента
+
+#### Регрессия
+Нет. Изменение изолировано в одной функции. Подписки (billing), recurring-планы и все остальные платёжные флоу не затронуты. Build чистый: 251/251 страниц, 0 TypeScript ошибок.

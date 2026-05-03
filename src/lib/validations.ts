@@ -144,6 +144,9 @@ export const createPaymentSchema = z.object({
                      .default('completed'),
   payment_details: z.record(z.string(), z.unknown()).optional().nullable(),
   amount_received: z.coerce.number().min(0).optional().nullable(),
+  // Рассрочка Tranzila: кол-во платежей [2, 36]. Передаётся в createTranzilaPaymentLink.
+  // При значении 1 или отсутствии — обычный одноразовый платёж.
+  installments: z.coerce.number().int().min(2).max(36).optional().nullable(),
 }).superRefine((data, ctx) => {
   // Израильский лимит наличных: 6000 ₪ (Закон об ограничении наличных расчётов)
   if (data.payment_method === 'cash' && data.amount > 6000) {

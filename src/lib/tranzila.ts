@@ -1,4 +1,4 @@
-﻿import crypto from 'crypto'
+import crypto from 'crypto'
 
 // ============================================================
 // HMAC АУТЕНТИФИКАЦИЯ — для Tranzila REST API (если понадобится)
@@ -139,6 +139,12 @@ export async function createTranzilaPaymentLink({
     throw new Error('Tranzila terminal not configured')
   }
 
+  // Валидация: кол-во платежей — целое число в диапазоне [2, 36]
+  const validatedInstallments =
+    installments && Number.isInteger(installments) && installments >= 2 && installments <= 36
+      ? installments
+      : undefined
+
   const params = new URLSearchParams({
     TranzilaPW: terminalPassword,
     sum: amount.toFixed(2),
@@ -149,7 +155,17 @@ export async function createTranzilaPaymentLink({
     fail_url_address: failUrl,
     cField1: paymentId,
     lang: 'il',
-    ...(installments && installments > 1 ? { tashloumim: String(installments) } : {}),
+    // ── РАССРОЧКА (Regular Installments, cred_type=8) ──────────────────────
+    // cred_type=8 — ОБЯЗАТЕЛЕН. Без него Tranzila игнорирует maxpay и
+    //               оформляет одноразовый платёж на полную сумму.
+    // maxpay      — максимальное кол-во платежей. Tranzila делит сумму сама.
+    //               НЕ передавать вместе с npay/fpay/spay (конфликт).
+    // Источник: Tranzila DirectNG iFrame docs, раздел "Installments".
+    // ───────────────────────────────────────────────────────────────────────
+    ...(validatedInstallments ? {
+      cred_type: '8',
+      maxpay:    String(validatedInstallments),
+    } : {}),
   })
 
   const url = `https://directng.tranzila.com/${terminalId}/iframenew.php?${params.toString()}`

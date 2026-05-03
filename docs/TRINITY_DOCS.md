@@ -5043,3 +5043,57 @@ Build чистый: 248 страниц, 0 ошибок TypeScript.
 
 #### Коммит
 - `feat: billing paywall system` (6c30423)
+
+
+---
+
+### 03.05.2026 — Billing Security Fix (коммит efc88fe)
+
+#### Что исправлено
+
+**`/api/billing/paywall-link`** — уязвимость: клиент мог передать `body.plan` и получить Tranzila ссылку с заниженной суммой (например `basic: ₪199` вместо `enterprise: ₪499`). Теперь `plan` берётся **только из БД** (`org.plan`), тело запроса игнорируется.
+
+**`/api/billing/invalidate`** — добавлена очистка cookie `trinity_paywall_data` при инвалидации. Раньше она оставалась 30 минут после авто-разблокировки.
+
+#### Затронутые файлы
+- `src/app/api/billing/paywall-link/route.ts` — убран `body.plan`, только `org.plan`
+- `src/app/api/billing/invalidate/route.ts` — добавлен `delete('trinity_paywall_data')`
+
+#### Регрессия
+Нет. Build READY (efc88fe), 0 TypeScript ошибок.
+
+
+---
+
+### 03.05.2026 — Billing Paywall Reliability Fix
+
+#### Что добавлено / исправлено
+
+**Проблема:** Supabase Realtime теоретически может не доставить событие UPDATE (сетевой сбой, браузер заблокировал WebSocket). Клиент оплатил, но экран не разблокировался.
+
+**Решение: двойной fallback**
+
+1. **Polling каждые 15 сек** — после нажатия "Оплатить" `SubscriptionLock` запускает `setInterval` с вызовом нового `/api/billing/status`. Если статус стал active — разблокировка без Realtime.
+
+2. **3-минутный таймер** — если ни Realtime, ни polling не подтвердили за 3 минуты, показывается заметный amber-banner "Оплата не определена автоматически" с большой кнопкой "Оплатили? Нажмите для проверки". `handleRetry` теперь сначала проверяет статус через API, и если active — сразу разблокирует без reload.
+
+**Новый endpoint `/api/billing/status` (GET)**
+- Требует auth, НЕ требует активной подписки
+- Возвращает `{ active: boolean }` — живой статус из БД (no-cache)
+- Добавлен в `PUBLIC_PATH_PREFIXES` middleware (как paywall-link и invalidate)
+
+**middleware.ts**
+- Добавлены в PUBLIC_PATH_PREFIXES: `/api/billing/status`, `/api/billing/invalidate`
+  (раньше `invalidate` не был публичным — пользователь с неактивной подпиской мог получить 403 при вызове)
+
+#### Затронутые файлы
+- `src/components/billing/SubscriptionLock.tsx` — polling, 3min timer, timeout banner, handleRetry upgraded
+- `src/app/api/billing/status/route.ts` — новый endpoint
+- `middleware.ts` — PUBLIC_PATH_PREFIXES += status + invalidate
+- `docs/TRINITY_DOCS.md` — эта запись
+
+#### Realtime publication
+Подтверждено через SQL: таблица `organizations` присутствует в `supabase_realtime` publication. Авто-разблокировка через Realtime работает.
+
+#### Регрессия
+Нет. Polling — чисто аддитивная логика. Таймер и banner не появляются если Realtime сработал раньше 3 минут.

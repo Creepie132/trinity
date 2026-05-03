@@ -24,6 +24,8 @@ const PUBLIC_PATH_PREFIXES = [
   '/api/beautymania/',
   '/api/mobile/',
   '/api/billing/paywall-link', // Paywall: генерация ссылки оплаты без активной подписки
+  '/api/billing/status',       // Paywall: polling fallback — проверка статуса подписки
+  '/api/billing/invalidate',   // Paywall: инвалидация кэша после оплаты
 ]
 
 function isPublicPath(pathname: string): boolean {

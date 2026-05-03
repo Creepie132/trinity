@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { Shield, MessageCircle, Loader2, ExternalLink, RefreshCw, LogOut } from 'lucide-react'
+import { Shield, MessageCircle, Loader2, ExternalLink, RefreshCw, LogOut, AlertCircle } from 'lucide-react'
 
 interface PaywallData {
   plan: string
@@ -31,9 +31,12 @@ const I18N = {
     paying: 'מעביר לדף התשלום...',
     waitTitle: 'ממתין לאישור תשלום...',
     waitDesc: 'לאחר השלמת התשלום, הגישה תיפתח באופן אוטומטי',
+    waitTimeoutTitle: 'התשלום לא זוהה אוטומטית',
+    waitTimeoutDesc: 'אם שילמת, לחץ "בדוק שוב" — אחרת נסה שוב מאוחר יותר.',
     unlocked: 'הגישה הושבה! מפנה...',
     logout: 'התנתק',
     retry: 'בדוק שוב',
+    retryHighlight: 'שילמת? לחץ כאן לבדיקה',
     supportTitle: 'זקוק לעזרה?',
   },
   ru: {
@@ -49,11 +52,26 @@ const I18N = {
     paying: 'Переход на страницу оплаты...',
     waitTitle: 'Ожидание подтверждения оплаты...',
     waitDesc: 'После завершения оплаты доступ откроется автоматически',
+    waitTimeoutTitle: 'Оплата не определена автоматически',
+    waitTimeoutDesc: 'Если вы оплатили — нажмите «Проверить снова». Иначе попробуйте позже.',
     unlocked: 'Доступ восстановлен! Перенаправляем...',
     logout: 'Выйти',
     retry: 'Проверить снова',
+    retryHighlight: 'Оплатили? Нажмите для проверки',
     supportTitle: 'Нужна помощь?',
   },
+}
+
+// Polling: проверяем статус подписки напрямую через API (fallback если Realtime не сработал)
+async function pollSubscriptionStatus(): Promise<boolean> {
+  try {
+    const res = await fetch('/api/billing/status', { method: 'GET', cache: 'no-store' })
+    if (!res.ok) return false
+    const data = await res.json()
+    return data.active === true
+  } catch {
+    return false
+  }
 }
 
 export default function SubscriptionLock() {
@@ -65,9 +83,13 @@ export default function SubscriptionLock() {
   const [paywallData, setPaywallData] = useState<PaywallData>({ plan: 'basic', amount: 199 })
   const [loading, setLoading] = useState(false)
   const [waiting, setWaiting] = useState(false)
+  const [waitTimeout, setWaitTimeout] = useState(false) // Realtime не сработал за 3 мин
   const [unlocked, setUnlocked] = useState(false)
   const [orgId, setOrgId] = useState<string | null>(null)
+  const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // Читаем paywall_data из cookie
   useEffect(() => {
     try {
       const raw = document.cookie
@@ -81,6 +103,7 @@ export default function SubscriptionLock() {
     } catch {}
   }, [])
 
+  // Получаем org_id из сессии
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       const oid = data.session?.user?.app_metadata?.org_id
@@ -88,6 +111,7 @@ export default function SubscriptionLock() {
     })
   }, [])
 
+  // Авто-разблокировка через Realtime
   useEffect(() => {
     if (!orgId) return
     const channel = supabase
@@ -100,14 +124,44 @@ export default function SubscriptionLock() {
       }, async (payload) => {
         const s = payload.new?.subscription_status
         if (s === 'active' || s === 'manual') {
-          setUnlocked(true)
-          await fetch('/api/billing/invalidate', { method: 'POST' })
-          setTimeout(() => router.push('/dashboard'), 1800)
+          handleUnlock()
         }
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [orgId, router])
+  }, [orgId])
+
+  const handleUnlock = useCallback(async () => {
+    setUnlocked(true)
+    clearTimers()
+    await fetch('/api/billing/invalidate', { method: 'POST' })
+    setTimeout(() => router.push('/dashboard'), 1800)
+  }, [router])
+
+  const clearTimers = useCallback(() => {
+    if (waitTimerRef.current) clearTimeout(waitTimerRef.current)
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+  }, [])
+
+  // После нажатия "Оплатить": запускаем 3-минутный таймер + polling каждые 15 сек
+  const startWaitMode = useCallback(() => {
+    setWaiting(true)
+    setWaitTimeout(false)
+
+    // Polling каждые 15 секунд (fallback если Realtime не сработал)
+    pollIntervalRef.current = setInterval(async () => {
+      const active = await pollSubscriptionStatus()
+      if (active) handleUnlock()
+    }, 15_000)
+
+    // Через 3 минуты — показываем заметный retry-banner
+    waitTimerRef.current = setTimeout(() => {
+      clearInterval(pollIntervalRef.current!)
+      setWaitTimeout(true)
+    }, 3 * 60 * 1000)
+  }, [handleUnlock])
+
+  useEffect(() => () => clearTimers(), [clearTimers])
 
   const handlePay = useCallback(async () => {
     setLoading(true)
@@ -115,23 +169,29 @@ export default function SubscriptionLock() {
       const res = await fetch('/api/billing/paywall-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: paywallData.plan }),
+        body: JSON.stringify({}),
       })
       const data = await res.json()
       if (data.url) {
-        setWaiting(true)
         window.open(data.url, '_blank', 'noopener,noreferrer')
+        startWaitMode()
       }
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
-  }, [paywallData.plan])
+  }, [startWaitMode])
 
   const handleRetry = useCallback(async () => {
     setLoading(true)
+    // Сначала проверяем статус напрямую
+    const active = await pollSubscriptionStatus()
+    if (active) {
+      handleUnlock()
+      return
+    }
     await fetch('/api/billing/invalidate', { method: 'POST' })
     router.refresh()
     setLoading(false)
-  }, [router])
+  }, [router, handleUnlock])
 
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut()
@@ -213,8 +273,8 @@ export default function SubscriptionLock() {
             </div>
           </div>
 
-          {/* Waiting indicator */}
-          {waiting && (
+          {/* Waiting: нормальный режим (до 3 минут) */}
+          {waiting && !waitTimeout && (
             <div style={{
               background:'rgba(16,185,129,0.07)',border:'1px solid rgba(16,185,129,0.18)',
               borderRadius:'12px',padding:'14px 18px',marginBottom:'16px',textAlign:'center',
@@ -224,6 +284,31 @@ export default function SubscriptionLock() {
                 <span style={{ fontSize:'13px',fontWeight:600,color:'#10b981' }}>{t.waitTitle}</span>
               </div>
               <p style={{ fontSize:'11px',color:'rgba(248,250,252,0.4)',margin:0 }}>{t.waitDesc}</p>
+            </div>
+          )}
+
+          {/* Waiting timeout: Realtime не сработал — заметный retry */}
+          {waiting && waitTimeout && (
+            <div style={{
+              background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.3)',
+              borderRadius:'12px',padding:'14px 18px',marginBottom:'16px',
+            }}>
+              <div style={{ display:'flex',alignItems:'center',gap:'8px',marginBottom:'6px' }}>
+                <AlertCircle size={15} color='#f59e0b' />
+                <span style={{ fontSize:'13px',fontWeight:600,color:'#f59e0b' }}>{t.waitTimeoutTitle}</span>
+              </div>
+              <p style={{ fontSize:'11px',color:'rgba(248,250,252,0.45)',margin:'0 0 10px' }}>{t.waitTimeoutDesc}</p>
+              <button onClick={handleRetry} disabled={loading} style={{
+                width:'100%',padding:'10px 16px',
+                background:'linear-gradient(135deg,rgba(245,158,11,0.2),rgba(245,158,11,0.1))',
+                border:'1px solid rgba(245,158,11,0.4)',borderRadius:'10px',
+                color:'#f59e0b',fontSize:'13px',fontWeight:700,cursor:loading?'not-allowed':'pointer',
+                display:'flex',alignItems:'center',justifyContent:'center',gap:'7px',
+                fontFamily:"'Rubik',sans-serif",
+              }}>
+                {loading ? <Loader2 size={13} style={{ animation:'spin 1s linear infinite' }} /> : <RefreshCw size={13} />}
+                {t.retryHighlight}
+              </button>
             </div>
           )}
 
@@ -244,16 +329,19 @@ export default function SubscriptionLock() {
             }
           </button>
 
-          {/* Retry */}
-          <button onClick={handleRetry} style={{
-            width:'100%', padding:'11px 24px', background:'transparent',
-            border:'1px solid rgba(255,255,255,0.09)', borderRadius:'12px',
-            color:'rgba(248,250,252,0.4)', fontSize:'13px', cursor:'pointer',
-            display:'flex',alignItems:'center',justifyContent:'center',gap:'7px',
-            marginBottom:'24px', fontFamily:"'Rubik',sans-serif",
-          }}>
-            <RefreshCw size={13} />{t.retry}
-          </button>
+          {/* Retry (тихая кнопка, всегда видна) */}
+          {!waitTimeout && (
+            <button onClick={handleRetry} disabled={loading} style={{
+              width:'100%', padding:'11px 24px', background:'transparent',
+              border:'1px solid rgba(255,255,255,0.09)', borderRadius:'12px',
+              color:'rgba(248,250,252,0.4)', fontSize:'13px', cursor:loading?'not-allowed':'pointer',
+              display:'flex',alignItems:'center',justifyContent:'center',gap:'7px',
+              marginBottom:'24px', fontFamily:"'Rubik',sans-serif",
+            }}>
+              <RefreshCw size={13} />{t.retry}
+            </button>
+          )}
+          {waitTimeout && <div style={{ marginBottom:'24px' }} />}
 
           {/* Support */}
           <div style={{ borderTop:'1px solid rgba(255,255,255,0.06)', paddingTop:'22px' }}>

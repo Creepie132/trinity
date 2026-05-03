@@ -23,6 +23,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/api/register/',
   '/api/beautymania/',
   '/api/mobile/',
+  '/api/billing/paywall-link', // Paywall: генерация ссылки оплаты без активной подписки
 ]
 
 function isPublicPath(pathname: string): boolean {
@@ -183,14 +184,14 @@ export async function middleware(req: NextRequest) {
     if (jwtOrgId) {
       const { data } = await supabase
         .from('organizations')
-        .select('subscription_status, subscription_expires_at, features')
+        .select('subscription_status, subscription_expires_at, features, plan')
         .eq('id', jwtOrgId)
         .single()
       org = data
     } else {
       const { data: orgUser } = await supabase
         .from('org_users')
-        .select('org_id, organizations(subscription_status, subscription_expires_at, features)')
+        .select('org_id, organizations(subscription_status, subscription_expires_at, features, plan)')
         .eq('user_id', session.user.id)
         .maybeSingle()
       org = (orgUser?.organizations as any)
@@ -207,7 +208,18 @@ export async function middleware(req: NextRequest) {
     )
 
     if (isExpired && pathname !== '/subscription-expired') {
-      return NextResponse.redirect(new URL('/subscription-expired', req.url))
+      const paywallRedirect = NextResponse.redirect(new URL('/subscription-expired', req.url))
+      // Передаём plan/org_id в cookie — SubscriptionLock читает для отображения суммы
+      const plan = org?.plan ?? 'basic'
+      const PLAN_PRICES: Record<string, number> = { basic: 199, pro: 249, enterprise: 499 }
+      const amount = PLAN_PRICES[plan] ?? 199
+      paywallRedirect.cookies.set('trinity_paywall_data', JSON.stringify({ plan, amount }), {
+        httpOnly: false, // читается клиентом для UI
+        sameSite: 'lax',
+        maxAge: 60 * 30, // 30 минут
+        path: '/',
+      })
+      return paywallRedirect
     }
 
     const hasAccess = org && (

@@ -171,6 +171,30 @@ export async function checkAuth(): Promise<
         ),
       }
     }
+
+    // 6. Billing guard — блокируем API если подписка неактивна.
+    //    Защищает от обхода Paywall через DevTools / прямые API-вызовы.
+    //    Разрешённые статусы: active, manual, demo, trial (не истёкший).
+    const now = new Date()
+    const subStatus = orgData.subscription_status
+    const subExpiry = orgData.subscription_expires_at
+      ? new Date(orgData.subscription_expires_at) : null
+
+    const billingActive =
+      subStatus === 'active' ||
+      subStatus === 'manual' ||
+      subStatus === 'demo' ||
+      (subStatus === 'trial' && subExpiry && subExpiry > now)
+
+    if (!billingActive) {
+      return {
+        success: false,
+        response: NextResponse.json(
+          { error: 'subscription_required', message: 'Subscription is inactive' },
+          { status: 402 } // Payment Required
+        ),
+      }
+    }
   }
 
   return {

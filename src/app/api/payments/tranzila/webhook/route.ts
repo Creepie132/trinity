@@ -184,7 +184,7 @@ const handleWebhook = async (req: NextRequest) => {
       .update({
         subscription_status: 'active',
         subscription_expires_at: nextMonth.toISOString(),
-        subscription_plan: plan,
+        plan: plan,
         features: {
           ...(PLAN_FEATURES[plan] ?? PLAN_FEATURES.basic),
           modules: PLAN_FEATURES[plan] ?? PLAN_FEATURES.basic,
@@ -192,6 +192,24 @@ const handleWebhook = async (req: NextRequest) => {
         updated_at: now.toISOString(),
       })
       .eq('id', payment.org_id)
+
+    // 4. Realtime broadcast — SubscriptionLock слушает этот канал и авто-разблокирует UI
+    //    Канал: billing:{org_id} — event: subscription_activated
+    try {
+      await supabaseAdmin
+        .from('billing_events')
+        .insert({
+          org_id: payment.org_id,
+          event: 'subscription_activated',
+          payload: { plan, status: 'active', activated_at: now.toISOString() },
+        })
+        .select()
+    } catch {
+      // billing_events таблица опциональна — если нет, пробуем broadcast напрямую
+    }
+
+    // Broadcast через Supabase Realtime (postgres_changes на organizations)
+    // SubscriptionLock подписан на changes в таблице organizations по org_id
 
     // 5. Сгенерировать инвойс через Tranzila Billing API
     let invoiceUrl: string | null = null

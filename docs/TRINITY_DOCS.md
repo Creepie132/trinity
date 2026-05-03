@@ -5097,3 +5097,25 @@ Build чистый: 248 страниц, 0 ошибок TypeScript.
 
 #### Регрессия
 Нет. Polling — чисто аддитивная логика. Таймер и banner не появляются если Realtime сработал раньше 3 минут.
+
+---
+
+### 03.05.2026 — Billing Paywall Bug Fix (коммит 6f52c90)
+
+#### Что исправлено
+
+**1. Realtime не разблокировал при статусах `demo` и `trial`**
+`SubscriptionLock` слушал только `active` | `manual` в Realtime-обработчике.
+Теперь логика разблокировки консистентна с middleware и `checkAuth()`:
+- `active` | `manual` | `demo` → разблокировать немедленно
+- `trial` + `subscription_expires_at > now` → разблокировать
+
+**2. Двойной polling interval при повторном нажатии "Оплатить"**
+Если пользователь нажимал "Оплатить" дважды — запускалось два параллельных `setInterval` (двойные запросы к `/api/billing/status`).
+Фикс: `startWaitMode()` теперь вызывает `clearTimers()` в начале перед запуском нового интервала.
+
+#### Затронутые файлы
+- `src/components/billing/SubscriptionLock.tsx`
+
+#### Регрессия
+Нет. Оба исправления — чисто аддитивные / defensive. Build чистый (6f52c90).

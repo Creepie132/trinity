@@ -320,7 +320,7 @@ export default function BookingSettingsPage() {
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              {language === 'he' ? 'קביעת תורים מקוונת' : 'Онлайн-запись'}
+              {language === 'he' ? 'פורטל לקוחות' : 'Онлайн-Сервисы'}
             </h1>
           </div>
         </div>
@@ -355,10 +355,10 @@ export default function BookingSettingsPage() {
         </Link>
         <div className="flex-1">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
-            {language === 'he' ? 'הזמנות ורישום' : 'Запись и регистрация'}
+            {language === 'he' ? 'פורטל לקוחות' : 'Онлайн-Сервисы'}
           </h1>
           <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">
-            {language === 'he' ? 'הגדרות הזמנה מקוונת ורישום עצמי' : 'Настройки онлайн-записи и самостоятельной регистрации'}
+            {language === 'he' ? 'קביעת תורים והרשמה עצמית ללקוחות' : 'Онлайн-запись и регистрация клиентов'}
           </p>
         </div>
       </div>

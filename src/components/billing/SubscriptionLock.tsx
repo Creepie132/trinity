@@ -123,7 +123,14 @@ export default function SubscriptionLock() {
         filter: `id=eq.${orgId}`,
       }, async (payload) => {
         const s = payload.new?.subscription_status
-        if (s === 'active' || s === 'manual') {
+        const expiry = payload.new?.subscription_expires_at
+          ? new Date(payload.new.subscription_expires_at) : null
+        const isActive =
+          s === 'active' ||
+          s === 'manual' ||
+          s === 'demo' ||
+          (s === 'trial' && expiry != null && expiry > new Date())
+        if (isActive) {
           handleUnlock()
         }
       })
@@ -145,6 +152,7 @@ export default function SubscriptionLock() {
 
   // После нажатия "Оплатить": запускаем 3-минутный таймер + polling каждые 15 сек
   const startWaitMode = useCallback(() => {
+    clearTimers() // сбрасываем предыдущие таймеры (повторное нажатие "Оплатить")
     setWaiting(true)
     setWaitTimeout(false)
 

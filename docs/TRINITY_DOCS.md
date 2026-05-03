@@ -4710,7 +4710,37 @@ IP проверяется из `x-forwarded-for` (Vercel проксирует).
 
 ---
 
-## i18n Итерация №2 — 03.05.2026 (коммит 916c48a)
+## PWA Аудит — Итерация №2: Scroll Chaining Fix — 03.05.2026 (коммит 1f03b34)
+
+### Проблема
+При открытых модальных окнах или Drawer'ах фон продолжал прокручиваться (Scroll Chaining). На iOS Safari `overflow: hidden` на `body` игнорируется — браузер прокручивает страницу поверх модалки. Это ломало ощущение нативного PWA-приложения.
+
+### Решение
+
+**Новый хук `useScrollLock` (`src/hooks/useScrollLock.ts`)**
+- Глобальный счётчик `lockCount` — хук считает сколько компонентов одновременно требуют блокировки. Разблокировка происходит только когда счётчик = 0 (стек модалок безопасен).
+- **iOS Safari fix**: `position: fixed` + `top: -scrollY` + сохранение позиции в `body.dataset.scrollY`. При закрытии: `position: ''` + `window.scrollTo({ top: savedY, behavior: 'instant' })`. Единственный способ надёжно заблокировать скролл в iOS Safari.
+- **Android / Desktop**: `overflow: hidden` + `touch-action: none`.
+- Детект iOS один раз: `/iPad|iPhone|iPod/.test(navigator.userAgent)` + проверка `maxTouchPoints` для iPad OS 13+.
+
+**Интеграция в компоненты:**
+- `ModalBottomSheet.tsx` — убрана дублирующая ручная логика, заменена на `useScrollLock(open)`.
+- `BaseModal.tsx` — добавлен `useScrollLock(open && !pinned_)` (закреплённые PiP-модалки не блокируют фон).
+- `ModalWrapper.tsx` — заменена ручная логика на `useScrollLock(isOpen)`.
+
+**CSS защита (`src/styles/modal-animations.css`)**
+- `overscroll-behavior: contain` для overlay и dialog элементов.
+- `body[data-scroll-y] { overscroll-behavior: none }` — дополнительная защита во время iOS-блокировки.
+
+### Затронутые файлы
+`src/hooks/useScrollLock.ts` (новый), `src/components/ui/ModalBottomSheet.tsx`, `src/components/modals/BaseModal.tsx`, `src/components/ModalWrapper.tsx`, `src/styles/modal-animations.css`
+
+### Регрессия
+Нет. Билд чистый (244 страницы, 0 ошибок TypeScript).
+
+---
+
+## i18n Итерация №2 — DashboardShell + Broadcast — 03.05.2026 (коммит 916c48a)
 
 ### Что сделано
 

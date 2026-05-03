@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
     .eq('id', req.id)
 
   try {
+    // ── UPGRADE с prorated_amount > 0 ────────────────────────────────────
     if (req.proration_type === 'upgrade' && req.prorated_amount > 0) {
       // ── UPGRADE: charge с токена ──────────────────────────────────────────
       if (org.tranzila_card_token) {
@@ -132,7 +133,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: true, type: 'upgrade_charged', transaction_id: chargeResult.transaction_id })
 
       } else {
-        // Нет токена — генерируем Tranzila ссылку и возвращаем её
+        // Нет токена — генерируем Tranzila ссылку и возвращаем её клиенту.
+        // Откатываем статус обратно на pending_confirmation (charge не был выполнен).
+        // Когда клиент оплатит через link, tranzila-notify применит план через cField2.
+        // plan_change_requests.status будет завершён отдельным вызовом из notify.
         const paymentUrl = buildTranzilaUrl({
           amount:      req.prorated_amount,
           orgId:       org.id,
@@ -143,12 +147,19 @@ export async function POST(request: NextRequest) {
         })
 
         await supabase.from('plan_change_requests').update({
-          status: 'pending_confirmation', // остаётся pending до оплаты через link
+          status:       'pending_confirmation',
+          confirmed_at: null,
           charge_result: { method: 'payment_link', url: paymentUrl },
         }).eq('id', req.id)
 
         return NextResponse.json({ ok: true, type: 'payment_link_required', payment_url: paymentUrl })
       }
+
+    } else if (req.proration_type === 'upgrade' && req.prorated_amount === 0) {
+      // ── UPGRADE с prorated_amount = 0 (смена в самом начале периода) ──────
+      await applyPlanChange(req)
+      await supabase.from('plan_change_requests').update({ status: 'completed' }).eq('id', req.id)
+      return NextResponse.json({ ok: true, type: 'upgrade_immediate' })
 
     } else if (req.proration_type === 'downgrade') {
       // ── DOWNGRADE: credit note + применить план сразу ─────────────────────
@@ -269,7 +280,10 @@ function buildTranzilaUrl(p: {
     fail_url_address:    `${BASE_URL}/api/payments/tranzila-failed`,
     notify_url_address:  `${BASE_URL}/api/payments/tranzila-notify`,
     cField1:             p.orgId,
+    // cField2 → tranzila-notify применяет план: plan_change:plan:price
     cField2:             `plan_change:${p.toPlan}:${p.toPrice}`,
+    // cField3 → tranzila-notify закрывает plan_change_request
+    cField3:             `pcr:${p.reqId}`,
     ...(p.ownerEmail ? { contact_email: p.ownerEmail } : {}),
   })
   return `https://directng.tranzila.com/${terminal}/iframenew.php?${params.toString()}`

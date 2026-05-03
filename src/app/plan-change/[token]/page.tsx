@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { CheckCircle, XCircle, Loader2, TrendingUp, TrendingDown, ArrowRight, CreditCard, Gift } from 'lucide-react'
 
 interface PlanChangeData {
@@ -25,7 +25,6 @@ type PageState = 'loading' | 'ready' | 'confirming' | 'success' | 'redirect_paym
 
 export default function PlanChangePage() {
   const { token } = useParams<{ token: string }>()
-  const router = useRouter()
 
   const [state, setState]     = useState<PageState>('loading')
   const [data, setData]       = useState<PlanChangeData | null>(null)

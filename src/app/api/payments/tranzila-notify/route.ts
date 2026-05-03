@@ -66,12 +66,16 @@ export async function POST(request: NextRequest) {
   const responseCode  = body['Response']
   const orgId         = body['cField1']
   const cField2       = body['cField2'] ?? ''   // e.g. "plan_change:pro:249"
+  const cField3       = body['cField3'] ?? ''   // e.g. "pcr:uuid" — plan_change_request id
   const transactionId = body['ConfirmationCode'] || body['index']
   const amount        = parseFloat(body['sum'] ?? '0')
 
-  // Detect proration plan-change payment (one-time charge for upgrade)
+  // Detect proration plan-change payment (one-time charge for upgrade via link)
   const planChangeMatch = cField2.match(/^plan_change:(\w+):(\d+(\.\d+)?)$/)
   const isPlanChange    = !!planChangeMatch
+  // plan_change_request id для завершения статуса
+  const pcrMatch = cField3.match(/^pcr:(.+)$/)
+  const pcrId    = pcrMatch ? pcrMatch[1] : null
 
   console.log('[tranzila-notify] Received:', { responseCode, orgId, transactionId, amount })
 
@@ -109,23 +113,34 @@ export async function POST(request: NextRequest) {
     planChangeUpdates.pending_plan_price = null
     planChangeUpdates.pending_plan_date  = null
     console.log('[tranzila-notify] Plan change applied:', newPlan, newPrice)
+
+    // Закрываем plan_change_request если есть pcrId
+    if (pcrId) {
+      await supabase
+        .from('plan_change_requests')
+        .update({ status: 'completed', charge_result: { method: 'payment_link', transaction_id: transactionId } })
+        .eq('id', pcrId)
+        .eq('status', 'pending_confirmation')
+      console.log('[tranzila-notify] plan_change_request completed:', pcrId)
+    }
   }
 
-  // Применяем доступные org_credits к текущему биллингу
+  // Применяем доступные org_credits к текущему биллингу (только не истёкшие и не применённые)
   let appliedCredit = 0
   try {
+    const now = new Date().toISOString()
     const { data: credits } = await supabase
       .from('org_credits')
       .select('id, amount')
       .eq('org_id', orgId)
       .is('applied_at', null)
       .gt('amount', 0)
-      .lte('expires_at', new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()) // не истёкшие
+      .gt('expires_at', now)   // FIX: gt (больше чем сейчас) = не истёкшие
 
     if (credits && credits.length > 0) {
       appliedCredit = credits.reduce((s: number, c: any) => s + parseFloat(c.amount), 0)
       const ids = credits.map((c: any) => c.id)
-      await supabase.from('org_credits').update({ applied_at: new Date().toISOString() }).in('id', ids)
+      await supabase.from('org_credits').update({ applied_at: now }).in('id', ids)
       console.log(`[tranzila-notify] Applied ₪${appliedCredit} credits for org:`, orgId)
     }
   } catch (creditErr) {

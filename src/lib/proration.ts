@@ -69,10 +69,6 @@ export function calcProration(
     ? (() => { const d = new Date(today); d.setDate(d.getDate() + 30); return d })()
     : periodEnd
 
-  // Дней в периоде (считаем от 30 дней назад от periodEnd)
-  const periodStart = new Date(effectivePeriodEnd)
-  periodStart.setDate(periodStart.getDate() - 30)
-
   const msLeft = effectivePeriodEnd.getTime() - today.getTime()
   const daysLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)))
   const daysInPeriod = 30 // стандарт

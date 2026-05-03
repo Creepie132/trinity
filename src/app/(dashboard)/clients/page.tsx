@@ -21,6 +21,7 @@ import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
 import { ClientCard } from '@/components/clients/ClientCard'
 import { DraftSaleIndicator } from '@/components/clients/DraftSaleIndicator'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { useClientSelfEditRealtime } from '@/hooks/useClientSelfEditRealtime'
 
 // ── Аватар с инициалами ───────────────────────────────────────────────────────
 function ClientAvatar({ firstName, lastName, size = 'md' }: { firstName: string; lastName: string; size?: 'sm' | 'md' }) {
@@ -82,6 +83,9 @@ export default function ClientsPage() {
   const { isDemo, clientLimit } = useDemoMode()
   const { role, orgId } = useAuth()
   const isOwner = role === 'owner'
+
+  // Realtime toast когда клиент обновляет профиль через self-edit ссылку
+  useClientSelfEditRealtime(orgId, language as 'he' | 'ru')
   const [demoLimitOpen, setDemoLimitOpen] = useState(false)
   const [exportLoading, setExportLoading] = useState(false)
   const queryClient = useQueryClient()

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Phone, MessageCircle, Mail, Pencil, Calendar, CreditCard, MessageSquare, FileText, ChevronRight, RefreshCw, PauseCircle, PlayCircle, AlertCircle, Plus, Paintbrush } from 'lucide-react'
+import { X, Phone, MessageCircle, Mail, Pencil, Calendar, CreditCard, MessageSquare, FileText, ChevronRight, RefreshCw, PauseCircle, PlayCircle, AlertCircle, Plus, Paintbrush, Link2, Loader2 } from 'lucide-react'
+import { useClientSelfEditLink } from '@/hooks/useClientSelfEditLink'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useAuth } from '@/hooks/useAuth'
@@ -56,6 +57,7 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
   const [hasPaintCode, setHasPaintCode] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  const { generateLink, isGenerating } = useClientSelfEditLink(locale)
   const isRTL = locale === 'he'
   const fullName = `${client?.first_name || ''} ${client?.last_name || ''}`.trim() || '—'
   const initials = `${(client?.first_name || '')[0] || ''}${(client?.last_name || '')[0] || ''}`.toUpperCase()
@@ -394,6 +396,15 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
                 <Mail size={18} />
               </button>
             )}
+            {/* Ссылка на self-edit */}
+            <button
+              onClick={() => generateLink(client.id)}
+              disabled={isGenerating}
+              title={locale === 'he' ? 'שלח לקוח לעדכון פרטים' : 'Отправить ссылку на редактирование'}
+              className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 flex items-center justify-center transition disabled:opacity-50"
+            >
+              {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Link2 size={18} />}
+            </button>
           </div>
 
           {/* Данные клиента */}

@@ -4707,3 +4707,27 @@ IP проверяется из `x-forwarded-for` (Vercel проксирует).
 
 ### Регрессия
 Нет. Билд чистый (244 страницы, 0 ошибок TypeScript).
+
+---
+
+## i18n Итерация №2 — 03.05.2026 (коммит 916c48a)
+
+### Что сделано
+
+**1. DashboardShell — удалён дублирующий `LanguageProvider`**
+- `LanguageProvider` внутри `DashboardShell` удалён. Он жил поверх корневого из `layout.tsx` и стартовал без `initialLocale` → читал только `localStorage`, игнорируя SSR-значение из БД → потенциальный флаш языка при несовпадении.
+- `useLanguage()` внутри шелла работает через корневой контекст без изменений.
+- Импорт `LanguageProvider` убран, добавлен поясняющий комментарий.
+
+**2. Broadcast — полная локализация, 0 инлайн-строк**
+- `broadcast/page.tsx`: ~35 инлайн-строк формата `l ? '...' : '...'` заменены на `t('broadcast.*')`.
+- `LimitBar`, `ClientRow`, `FilterButton` — все sub-компоненты переведены через `useLanguage()`.
+- `dir` из контекста (не хардкод `l ? 'rtl' : 'ltr'`) — RTL/LTR через единый источник истины.
+- Добавлены 31 ключ в словарь (`he` + `ru`): `broadcast.title`, `broadcast.limitTitle`, `broadcast.limitOver`, `broadcast.limitOverDesc`, `broadcast.limitRemaining`, `broadcast.searchPlaceholder`, `broadcast.filter*`, `broadcast.selectedCount`, `broadcast.selectAll`, `broadcast.clearSelection`, `broadcast.daysAgo`, `broadcast.noClients`, `broadcast.messageTitle`, `broadcast.messagePlaceholder`, `broadcast.messageNote`, `broadcast.selectedSummary`, `broadcast.result*`, `broadcast.sendBtn`, `broadcast.sending`, `broadcast.limitNote`.
+- Лишний импорт `Filter, X, ChevronDown` (неиспользуемые иконки) удалён.
+
+### Затронутые файлы
+`src/app/(dashboard)/DashboardShell.tsx`, `src/app/(dashboard)/broadcast/page.tsx`, `src/contexts/LanguageContext.tsx`
+
+### Регрессия
+Нет. Билд чистый (244 страницы, 0 ошибок TypeScript).

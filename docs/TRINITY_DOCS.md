@@ -4942,3 +4942,55 @@ Sticky save bar — появляется при наличии несохран�
 #### Регрессия
 Нет. Старый `/api/staff-permissions` сохранён нетронутым (совместимость с `useStaffPermissions` хуком).
 Build чистый: 248 страниц, 0 ошибок TypeScript.
+
+
+---
+
+### 03.05.2026 — Proration Billing System
+
+#### Что добавлено
+Полная система proration-биллинга для смены тарифных планов Trinity CRM.
+
+#### Архитектура
+
+**Upgrade (переход на более дорогой план):**
+1. Admin создаёт запрос через `/admin/subscriptions` → кнопка "Сменить план"
+2. API создаёт `plan_change_requests` запись с `confirm_token`
+3. Клиент получает email со ссылкой `/plan-change/[token]`
+4. Клиент видит детали изменения, ставит галочку согласия, подтверждает
+5. Если есть `tranzila_card_token` → автосписание через CGI (`secure5.tranzila.com`)
+6. Если токена нет → генерируется Tranzila iframe ссылка
+7. После оплаты → новый план применяется немедленно
+
+**Downgrade (переход на более дешёвый план):**
+1. Тот же flow через email + подтверждение клиентом
+2. После подтверждения → кредит за оставшиеся дни записывается в `org_credits`
+3. Новый план применяется немедленно (не в конце периода)
+4. Кредит автоматически применяется к следующему рекуррентному биллингу (в `tranzila-notify`)
+
+**Формула:**
+- Upgrade: `(newPrice - oldPrice) / 30 * daysLeft`
+- Downgrade: `(oldPrice - newPrice) / 30 * daysLeft` → credit note
+
+#### Новые файлы
+- `src/lib/proration.ts` — утилита расчёта proration + типы
+- `src/app/api/admin/prorate/route.ts` — GET (preview) + POST (создать запрос + email)
+- `src/app/api/plan-change/confirm/route.ts` — GET (preview для страницы) + POST (подтверждение, charge, credit)
+- `src/app/plan-change/[token]/page.tsx` — PWA страница подтверждения для клиента
+- `src/components/modals/admin/ProrateModal.tsx` — модалка в /admin/subscriptions
+- `src/app/api/cron/apply-plan-changes/route.ts` — cron (устаревший, оставлен)
+- `supabase/migrations/20260503_proration_columns.sql` — колонки `pending_plan*` в organizations
+- `supabase/migrations/20260503_plan_change_requests.sql` — таблицы `plan_change_requests`, `org_credits`
+
+#### Изменённые файлы
+- `src/app/admin/subscriptions/page.tsx` — кнопка "Сменить план" в OrgSheet
+- `src/app/api/payments/tranzila-notify/route.ts` — применение `org_credits` при рекуррентном биллинге + поддержка `plan_change` в `cField2`
+- `vercel.json` — новый cron `/api/cron/apply-plan-changes` (04:00 UTC)
+
+#### DB новые таблицы
+- `plan_change_requests` — запросы смены плана, confirm_token, status flow
+- `org_credits` — кредиты (credit notes) при downgrade, применяются к следующему billing
+
+#### Коммиты
+- `feat_proration` (94b21c2)
+- `feat_proration_v2_with_confirmation` (78a51fb)

@@ -1,8 +1,0 @@
-﻿Patching hooks...
-useSales.ts patched
-useProducts.ts patched
-useInventory.ts patched
-useExpenses.ts patched
-useServices.ts patched
-useVisitServices.ts patched
-Done.

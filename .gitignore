@@ -69,3 +69,8 @@ public/workbox-*.js
 public/workbox-*.js.map
 public/worker-*.js
 public/worker-*.js.map
+
+# Служебные файлы Claude (Desktop Commander)
+docs/_deploy.ps1
+docs/_git_result.txt
+docs/_git_out.txt

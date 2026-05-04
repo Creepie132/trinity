@@ -48,23 +48,31 @@ F:\Amber_solutions_Kira\Trinity\
 
 ## 🚀 Деплой — единственный способ
 
+Git работает ТОЛЬКО через PowerShell скрипт с выводом в файл.
+Прямые git команды через Desktop Commander не возвращают вывод — не использовать.
+
 ```powershell
-# 1. Билд (обязательно, без ошибок)
-cd "F:\Amber_solutions_Kira\Trinity"
-npm run build
+# 1. Записать docs\_deploy.ps1:
+Set-Location "F:\Amber_solutions_Kira\Trinity"
+$git = "C:\Program Files\Git\cmd\git.exe"
+& $git add -A 2>&1 | Out-File "docs\_git_result.txt"
+& $git commit -m "тип: описание" 2>&1 | Out-File "docs\_git_result.txt" -Append
+& $git push origin main 2>&1 | Out-File "docs\_git_result.txt" -Append
 
-# 2. Коммит
-git add -A
-git commit -m "тип: описание"
+# 2. Запустить через cmd:
+powershell.exe -ExecutionPolicy Bypass -File F:\Amber_solutions_Kira\Trinity\docs\_deploy.ps1
 
-# 3. Пуш = production (main ветка = ambersol.co.il)
-git push origin main
+# 3. Прочитать результат:
+# read_file → docs\_git_result.txt
+# Убедиться что есть строка: main -> main
+
+# 4. Проверить Vercel MCP → state: BUILDING ✓
 ```
 
 **Важно:**
-- `git push origin main` — это сразу production, никакого отдельного шага
+- `git push origin main` = сразу production (`ambersol.co.il`), никакого отдельного шага
 - Никогда не пушить если build упал с ошибками
-- Никогда не пушить вслепую без прочтения изменённых файлов
+- `docs\_git_result.txt` и `docs\_deploy.ps1` — служебные, в `.gitignore`
 
 ### Формат коммитов
 ```

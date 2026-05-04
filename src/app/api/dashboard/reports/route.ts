@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getAuthContext } from '@/lib/auth-helpers'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
+    // ── Auth check ──────────────────────────────────────────────────────────
+    const auth = await getAuthContext(request)
+    if ('error' in auth) return auth.error
+
     const { searchParams } = request.nextUrl
     const org_id = searchParams.get('org_id')
     const from = searchParams.get('from')
@@ -15,6 +20,11 @@ export async function GET(request: NextRequest) {
         { error: 'Missing org_id, from, or to' },
         { status: 400 }
       )
+    }
+
+    // ── Ownership check ─────────────────────────────────────────────────────
+    if (!auth.isAdmin && org_id !== auth.orgId && org_id !== auth.mainOrgId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const supabase = createClient(
@@ -159,12 +169,10 @@ export async function GET(request: NextRequest) {
     const newClients = clients?.length || 0
 
     // Returning clients (2+ visits in period)
-    // Calculate manually
     const clientVisitMap = new Map()
     for (const visit of visits || []) {
       const clientId = (visit as any).client_id
       if (!clientId) continue
-
       clientVisitMap.set(clientId, (clientVisitMap.get(clientId) || 0) + 1)
     }
 
@@ -173,7 +181,6 @@ export async function GET(request: NextRequest) {
     ).length
 
     // Average interval between visits
-    // Calculate manually by getting all visits for org and computing intervals
     let avgInterval = 0
     try {
       const { data: allVisits } = await supabase
@@ -189,7 +196,7 @@ export async function GET(request: NextRequest) {
           if (allVisits[i].client_id === allVisits[i - 1].client_id) {
             const diff = new Date(allVisits[i].scheduled_at).getTime() -
                         new Date(allVisits[i - 1].scheduled_at).getTime()
-            intervals.push(diff / (1000 * 60 * 60 * 24)) // Convert to days
+            intervals.push(diff / (1000 * 60 * 60 * 24))
           }
         }
 

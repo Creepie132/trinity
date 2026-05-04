@@ -1,15 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getAuthContext } from '@/lib/auth-helpers'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
+    // ── Auth: Bearer (mobile) или cookie (web) ─────────────────────────────
+    const auth = await getAuthContext(request)
+    if ('error' in auth) return auth.error
+
     const { searchParams } = request.nextUrl
     const org_id = searchParams.get('org_id')
 
     if (!org_id) {
       return NextResponse.json({ error: 'Missing org_id' }, { status: 400 })
+    }
+
+    // ── Ownership check: нельзя запросить чужие данные ────────────────────
+    // isAdmin (super_admin) может запрашивать любую org
+    if (!auth.isAdmin && org_id !== auth.orgId && org_id !== auth.mainOrgId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const supabase = createClient(

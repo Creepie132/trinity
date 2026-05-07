@@ -138,7 +138,7 @@ export function TrinityModalShell({
         style={{
           position:        'absolute',
           top:             10,
-          right:           10,
+          ...(dir === 'rtl' ? { left: 10 } : { right: 10 }),
           zIndex:          200,
           width:           28,
           height:          28,

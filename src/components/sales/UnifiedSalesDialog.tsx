@@ -114,6 +114,8 @@ function ItemPickerSheet({ isOpen, onClose, isHe, onAdd }: {
   const [customName, setCustomName] = useState('')
   const [customPrice, setCustomPrice] = useState('')
   const [mounted, setMounted] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const customInputRef = useRef<HTMLInputElement>(null)
   const { data: services = [], isLoading: svcLoading } = useServices()
   const { data: products = [] } = useQuery({
     queryKey: ['products-for-sale-picker'],
@@ -129,6 +131,17 @@ function ItemPickerSheet({ isOpen, onClose, isHe, onAdd }: {
   useEffect(() => {
     if (isOpen) { setStep('choose'); setSearch(''); setCustomName(''); setCustomPrice('') }
   }, [isOpen])
+  useEffect(() => {
+    if (!isOpen) return
+    if (step === 'service' || step === 'product') {
+      const t = setTimeout(() => searchInputRef.current?.focus(), 80)
+      return () => clearTimeout(t)
+    }
+    if (step === 'custom') {
+      const t = setTimeout(() => customInputRef.current?.focus(), 80)
+      return () => clearTimeout(t)
+    }
+  }, [step, isOpen])
 
   if (!isOpen || !mounted) return null
 
@@ -177,7 +190,7 @@ function ItemPickerSheet({ isOpen, onClose, isHe, onAdd }: {
                 <button onClick={() => setStep('choose')} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
                   <ChevronLeft size={13}/>{isHe?'חזור':'Назад'}
                 </button>
-                <input type="text" value={search} onChange={e => setSearch(e.target.value)} autoFocus
+                <input ref={searchInputRef} type="text" value={search} onChange={e => setSearch(e.target.value)}
                   placeholder={isHe?'חיפוש...':'Поиск...'}
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-violet-200" />
               </div>
@@ -210,7 +223,7 @@ function ItemPickerSheet({ isOpen, onClose, isHe, onAdd }: {
                 <button onClick={() => setStep('choose')} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
                   <ChevronLeft size={13}/>{isHe?'חזור':'Назад'}
                 </button>
-                <input type="text" value={search} onChange={e => setSearch(e.target.value)} autoFocus
+                <input ref={searchInputRef} type="text" value={search} onChange={e => setSearch(e.target.value)}
                   placeholder={isHe?'חיפוש...':'Поиск...'}
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-200" />
               </div>
@@ -237,7 +250,7 @@ function ItemPickerSheet({ isOpen, onClose, isHe, onAdd }: {
               <button onClick={() => setStep('choose')} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
                 <ChevronLeft size={13}/>{isHe?'חזור':'Назад'}
               </button>
-              <input type="text" value={customName} onChange={e => setCustomName(e.target.value)} autoFocus
+              <input ref={customInputRef} type="text" value={customName} onChange={e => setCustomName(e.target.value)}
                 placeholder={isHe?'שם פריט':'Название'}
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-300" />
               <div className="relative">

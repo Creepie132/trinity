@@ -269,4 +269,79 @@ docs: документация
 
 ---
 
+---
+
+## 📝 Changelog (сессии разработки)
+
+### 07.05.2026 — Проверка системы + фиксы
+
+#### fix(login): Google OAuth — выбор аккаунта
+**Файл:** `src/app/login/page.tsx`
+
+**Проблема:** При нажатии «Войти через Google» браузер сразу логинил без показа экрана выбора аккаунта.
+
+**Фикс:** Добавлен параметр `queryParams: { prompt: 'select_account' }` в `signInWithOAuth`. Теперь всегда показывается account picker Google.
+
+```typescript
+// Было:
+options: { redirectTo: `${window.location.origin}/callback` }
+
+// Стало:
+options: {
+  redirectTo: `${window.location.origin}/callback`,
+  queryParams: { prompt: 'select_account' },
+}
+```
+
+---
+
+#### fix(sales): поиск услуг в ItemPickerSheet не принимал ввод
+**Файл:** `src/components/sales/UnifiedSalesDialog.tsx` (локальная `ItemPickerSheet`)
+
+**Проблема:** При открытии пикера «Выберите услугу» в продажах — поле поиска визуально есть, но ввод с клавиатуры не работал. `autoFocus` не захватывал фокус потому что `ItemPickerSheet` рендерится через `createPortal` поверх уже активной модалки (`TrinityModalShell`), которая удерживает focus trap внутри себя.
+
+**Фикс:** Убран `autoFocus`, добавлены `useRef` + `useEffect` с явным `.focus()` и задержкой 80ms после смены `step`. Задержка нужна чтобы портал успел отрендериться и focus trap родителя успокоился.
+
+```typescript
+const searchInputRef = useRef<HTMLInputElement>(null)
+const customInputRef = useRef<HTMLInputElement>(null)
+
+useEffect(() => {
+  if (!isOpen) return
+  if (step === 'service' || step === 'product') {
+    const t = setTimeout(() => searchInputRef.current?.focus(), 80)
+    return () => clearTimeout(t)
+  }
+  if (step === 'custom') {
+    const t = setTimeout(() => customInputRef.current?.focus(), 80)
+    return () => clearTimeout(t)
+  }
+}, [step, isOpen])
+```
+
+---
+
+#### QA: Проверка системы через браузер (Claude in Chrome)
+Проведена полная проверка через реальный браузер на ambersol.co.il:
+
+| Раздел | Статус | Примечания |
+|--------|--------|-----------|
+| Логин Google | ✅ | После фикса account picker работает |
+| Клиенты — список | ✅ | Загрузка, 7 клиентов |
+| Клиенты — поиск | ✅ | Debounce ~1-2 сек, фильтрует корректно |
+| Клиенты — карточка | ✅ | Все кнопки: Продажа, WhatsApp, Визит, Редактировать |
+| Клиенты — добавить | ✅ | Модалка открывается, все поля |
+| Клиенты — сортировка | ✅ | Все 4 варианта работают |
+| Escape закрывает модалку | ✅ | |
+| Визиты — список | ✅ | |
+| Визиты — новый визит | ✅ | Форма с клиентом, позициями, датой |
+| Продажи — список | ✅ | Статистика, фильтры по статусу |
+| Продажи — новая сделка | ✅ | |
+| Продажи — поиск услуг | ✅ | После фикса работает |
+| Сортировка по алфавиту | ✅ | Список пересортировывается |
+
+**Замечание:** 5 сделок у Влади Халфин со статусом «Не оплачено» на ₪500 — возможно тестовые данные, стоит проверить.
+
+---
+
 *Последнее обновление: 07.05.2026*

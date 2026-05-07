@@ -67,7 +67,6 @@ export function Modal({
 }: ModalProps) {
   const idRef = useRef<string>(modalIdProp || `modal-${++idCounter}`)
   const modalId = idRef.current
-  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   const [mounted, setMounted] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
@@ -86,6 +85,8 @@ export function Modal({
   const { containerRef, handleRef, resetPosition, getCurrentPosition } = useDraggableDialog()
 
   const pinnedData = pinned.find(p => p.id === modalId)
+  // wrapperRef wraps modal + floating close button so they move together when dragged
+  const wrapperRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (pinnedData && containerRef.current) {
@@ -136,39 +137,7 @@ export function Modal({
     if (!open && !pinned_) resetPosition()
   }, [open])
 
-  // Position the floating close button relative to the modal container
-  useEffect(() => {
-    if (!open || pinned_ || !containerRef.current || !closeButtonRef.current) return
-    const updatePos = () => {
-      const modal = containerRef.current
-      const btn   = closeButtonRef.current
-      if (!modal || !btn) return
-      const rect    = modal.getBoundingClientRect()
-      const btnSize = 48
-      const gap     = 12  // gap between button and modal edge
-
-      if (dir === 'rtl') {
-        // RTL: top-left, outside modal
-        btn.style.left = `${rect.left - btnSize - gap}px`
-      } else {
-        // LTR: top-right, outside modal
-        btn.style.left = `${rect.right + gap}px`
-      }
-      btn.style.top     = `${rect.top - btnSize / 2}px`
-      btn.style.opacity = '1'
-    }
-    // double-rAF: wait for CSS transform to settle before reading coordinates
-    let raf1: number, raf2: number
-    raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(updatePos)
-    })
-    window.addEventListener('resize', updatePos)
-    return () => {
-      cancelAnimationFrame(raf1)
-      cancelAnimationFrame(raf2)
-      window.removeEventListener('resize', updatePos)
-    }
-  }, [open, pinned_, dir, mounted])
+  // No JS positioning needed — floating button is CSS-positioned via wrapper
 
   if (!open && !pinned_) return null
   if (!mounted) return null
@@ -188,24 +157,21 @@ export function Modal({
         />
       )}
 
-      {/* Modal container */}
+      {/* Modal container — overflow:visible so floating close btn can peek outside */}
       <div
         ref={containerRef}
         onMouseDown={() => pinned_ && bringToFront(modalId)}
         data-trinity-modal-wrapper=""
         className={cn(
-          'fixed bg-white dark:bg-gray-900 shadow-2xl pointer-events-auto flex flex-col',
+          'fixed pointer-events-auto',
           'animate-in fade-in-0 duration-200',
-          'rounded-2xl overflow-hidden',
           'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
-          'max-h-[92dvh] md:max-h-[calc(100dvh-32px)]',
-          pinned_ && 'ring-2 ring-orange-400/60',
+          pinned_ && 'ring-2 ring-orange-400/60 rounded-2xl',
           className
         )}
         data-desktop={isDesktop ? 'true' : undefined}
         style={{
           zIndex,
-          // Фиксированная ширина — контент не диктует размер контейнера
           width: '95%',
           maxWidth: width
             ? `clamp(320px, ${width}, calc(100vw - 32px))`
@@ -215,13 +181,15 @@ export function Modal({
             : sizeClasses[size] === 'max-w-xl'  ? 'clamp(320px, 85vw, 576px)'
             : 'clamp(320px, 80vw, 896px)',
           marginInline: 'auto',
-          overflowWrap: 'break-word',
+          overflow: 'visible',
         }}
         role="dialog"
         aria-modal={!pinned_}
         aria-labelledby={title ? 'modal-title' : undefined}
         dir={dir}
       >
+        {/* Inner wrapper — clipping, bg, shadow, scroll height */}
+        <div className="flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-gray-900 shadow-2xl max-h-[92dvh] md:max-h-[calc(100dvh-32px)]" style={{ overflowWrap: 'break-word' }}>
         {darkHeader ? (
           /* ── Dark header mode ────────────────────────────────────────────
              Drag handle is a transparent zone over the dark header.
@@ -314,38 +282,40 @@ export function Modal({
             {footer}
           </div>
         )}
-      </div>
+        </div>{/* /inner overflow-hidden wrapper */}
 
-      {/* Floating close button — levitates outside the modal corner */}
+      {/* Floating close button — absolutely positioned outside the modal box */}
       {showCloseButton && !pinned_ && isDesktop && (
         <button
-          ref={closeButtonRef}
           onClick={onClose}
           aria-label="Close"
+          className="trinity-modal-close-btn"
           style={{
-            position:     'fixed',
-            zIndex:       (zIndexOverride ?? 9000) + 10,
-            width:        48,
-            height:       48,
-            borderRadius: '50%',
-            background:   '#3c3c3c',
-            border:       'none',
-            color:        '#ffffff',
-            cursor:       'pointer',
-            display:      'flex',
-            alignItems:   'center',
+            position:       'absolute',
+            top:            '-16px',
+            [dir === 'rtl' ? 'left' : 'right']: '-16px',
+            zIndex:         10,
+            width:          40,
+            height:         40,
+            borderRadius:   '50%',
+            background:     '#3c3c3c',
+            border:         'none',
+            color:          '#ffffff',
+            cursor:         'pointer',
+            display:        'flex',
+            alignItems:     'center',
             justifyContent: 'center',
-            boxShadow:    '0 4px 24px rgba(0,0,0,0.5)',
-            opacity:      0,
-            transition:   'transform 0.15s, opacity 0.1s',
-            pointerEvents: 'auto',
+            boxShadow:      '0 4px 20px rgba(0,0,0,0.45)',
+            transition:     'transform 0.15s, background 0.15s',
+            flexShrink:     0,
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.1)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.1)'; (e.currentTarget as HTMLButtonElement).style.background = '#555' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';   (e.currentTarget as HTMLButtonElement).style.background = '#3c3c3c' }}
         >
-          <X size={22} strokeWidth={2.5} />
+          <X size={20} strokeWidth={2.5} />
         </button>
       )}
+      </div>{/* /containerRef */}
     </>,
     document.body
   )

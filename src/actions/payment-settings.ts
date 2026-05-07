@@ -19,25 +19,21 @@ export type UpdatePaymentMethodsResult =
 export async function updatePaymentMethods(
   raw: unknown
 ): Promise<UpdatePaymentMethodsResult> {
-  // 1. Валидация через Zod
   const parsed = UpdatePaymentMethodsSchema.safeParse(raw)
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Неверные данные' }
   }
 
-  // 2. Авторизация — orgId берём из сессии, не из тела запроса
   const auth = await getAuthContext()
   if ('error' in auth) {
     return { success: false, error: 'Не авторизован' }
   }
   const { orgId, supabase } = auth as any
 
-  // 3. Нормализация (никогда не пишем 'credit_card')
   const methods = parsed.data.enabled_payment_methods.map((m) =>
     (m as string) === 'credit_card' ? 'card' : m
   )
 
-  // 4. Обновление в БД с явной проверкой org_id
   const { error } = await supabase
     .from('organizations')
     .update({ enabled_payment_methods: methods })
@@ -47,12 +43,118 @@ export async function updatePaymentMethods(
     return { success: false, error: error.message }
   }
 
-  // 5. Жёсткий сброс Next.js кэша для всех путей, читающих методы оплаты
   revalidatePath('/settings/payments')
   revalidatePath('/(dashboard)/payments')
   revalidatePath('/(dashboard)/visits')
   revalidatePath('/(dashboard)/finances')
   revalidatePath('/payments')
+
+  return { success: true }
+}
+
+// ─── Tranzila credentials setup ───────────────────────────────────────────────
+
+const TranzilaCredentialsSchema = z.object({
+  tranzila_terminal:       z.string().min(1, 'Введите имя терминала'),
+  tranzila_password:       z.string().min(1, 'Введите пароль терминала'),
+  tranzila_token_terminal: z.string().optional(),
+  tranzila_token_password: z.string().optional(),
+})
+
+export type SaveTranzilaResult =
+  | { success: true }
+  | { success: false; error: string }
+
+/**
+ * Сохраняет учётные данные Tranzila для текущей организации.
+ * После успешного сохранения — включает метод 'card' в enabled_payment_methods.
+ * orgId берётся строго из сессии — не из тела запроса.
+ */
+export async function saveTranzilaCredentials(
+  raw: unknown
+): Promise<SaveTranzilaResult> {
+  const parsed = TranzilaCredentialsSchema.safeParse(raw)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Неверные данные' }
+  }
+
+  const auth = await getAuthContext()
+  if ('error' in auth) {
+    return { success: false, error: 'Не авторизован' }
+  }
+  const { orgId, supabase } = auth as any
+
+  const { tranzila_terminal, tranzila_password, tranzila_token_terminal, tranzila_token_password } = parsed.data
+
+  // 1. Читаем текущие enabled_payment_methods чтобы не затереть остальные
+  const { data: org, error: fetchErr } = await supabase
+    .from('organizations')
+    .select('enabled_payment_methods')
+    .eq('id', orgId)
+    .single()
+
+  if (fetchErr) return { success: false, error: fetchErr.message }
+
+  const current: string[] = org?.enabled_payment_methods ?? ['cash', 'card']
+  const withCard = current.includes('card') ? current : [...current, 'card']
+
+  // 2. Сохраняем credentials + включаем 'card'
+  const payload: Record<string, any> = {
+    tranzila_terminal:           tranzila_terminal.trim(),
+    tranzila_password:           tranzila_password.trim(),
+    enabled_payment_methods:     withCard,
+  }
+  if (tranzila_token_terminal?.trim()) payload.tranzila_token_terminal = tranzila_token_terminal.trim()
+  if (tranzila_token_password?.trim()) payload.tranzila_token_password = tranzila_token_password.trim()
+
+  const { error } = await supabase
+    .from('organizations')
+    .update(payload)
+    .eq('id', orgId)
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/settings/payments')
+  revalidatePath('/(dashboard)/payments')
+  revalidatePath('/(dashboard)/visits')
+
+  return { success: true }
+}
+
+/**
+ * Отключает Tranzila: очищает credentials и убирает 'card' из enabled_payment_methods.
+ */
+export async function disconnectTranzila(): Promise<SaveTranzilaResult> {
+  const auth = await getAuthContext()
+  if ('error' in auth) return { success: false, error: 'Не авторизован' }
+  const { orgId, supabase } = auth as any
+
+  const { data: org, error: fetchErr } = await supabase
+    .from('organizations')
+    .select('enabled_payment_methods')
+    .eq('id', orgId)
+    .single()
+
+  if (fetchErr) return { success: false, error: fetchErr.message }
+
+  const without = (org?.enabled_payment_methods ?? []).filter((m: string) => m !== 'card')
+  const safeWithout = without.length > 0 ? without : ['cash']
+
+  const { error } = await supabase
+    .from('organizations')
+    .update({
+      tranzila_terminal:       null,
+      tranzila_password:       null,
+      tranzila_token_terminal: null,
+      tranzila_token_password: null,
+      enabled_payment_methods: safeWithout,
+    })
+    .eq('id', orgId)
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/settings/payments')
+  revalidatePath('/(dashboard)/payments')
 
   return { success: true }
 }

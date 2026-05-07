@@ -67,6 +67,7 @@ export function Modal({
 }: ModalProps) {
   const idRef = useRef<string>(modalIdProp || `modal-${++idCounter}`)
   const modalId = idRef.current
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   const [mounted, setMounted] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
@@ -134,6 +135,27 @@ export function Modal({
   useEffect(() => {
     if (!open && !pinned_) resetPosition()
   }, [open])
+
+  // Position the floating close button relative to the modal container
+  useEffect(() => {
+    if (!open || pinned_ || !containerRef.current || !closeButtonRef.current) return
+    const updatePos = () => {
+      const modal = containerRef.current
+      const btn   = closeButtonRef.current
+      if (!modal || !btn) return
+      const rect = modal.getBoundingClientRect()
+      const btnSize = 44
+      if (dir === 'rtl') {
+        btn.style.left = `${rect.left - btnSize - 12}px`
+      } else {
+        btn.style.left = `${rect.right + 12}px`
+      }
+      btn.style.top = `${rect.top + 16}px`
+    }
+    updatePos()
+    window.addEventListener('resize', updatePos)
+    return () => window.removeEventListener('resize', updatePos)
+  }, [open, pinned_, dir, mounted])
 
   if (!open && !pinned_) return null
   if (!mounted) return null
@@ -219,15 +241,6 @@ export function Modal({
               >
                 {pinned_ ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
               </button>
-              {showCloseButton && (
-                <button
-                  onClick={onClose}
-                  className="p-1.5 rounded-full transition-colors text-white/60 hover:text-white hover:bg-white/20"
-                  aria-label="Close"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              )}
             </div>
 
             {/* Scrollable content */}
@@ -293,6 +306,28 @@ export function Modal({
           </div>
         )}
       </div>
+
+      {/* Floating close button — outside the modal, "levitating" beside it */}
+      {showCloseButton && !pinned_ && (
+        <button
+          ref={closeButtonRef}
+          onClick={onClose}
+          aria-label="Close"
+          className="fixed z-[9999] hidden md:flex items-center justify-center transition-all duration-150 hover:scale-110 active:scale-95"
+          style={{
+            width:        44,
+            height:       44,
+            borderRadius: '50%',
+            background:   '#3a3a3a',
+            border:       '2px solid rgba(255,255,255,0.12)',
+            color:        '#fff',
+            cursor:       'pointer',
+            boxShadow:    '0 4px 20px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3)',
+          }}
+        >
+          <X size={20} strokeWidth={2.5} />
+        </button>
+      )}
     </>,
     document.body
   )

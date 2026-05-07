@@ -2,10 +2,9 @@
 
 import { useEffect, useCallback, ReactNode, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, GripHorizontal, Pin, PinOff } from 'lucide-react'
+import { X, GripHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDraggableDialog } from '@/hooks/useDraggableDialog'
-import { usePinnedModals } from '@/store/usePinnedModals'
 
 interface ModalProps {
   open: boolean
@@ -24,11 +23,11 @@ interface ModalProps {
   contentClassName?: string
   dir?: 'rtl' | 'ltr'
   modalId?: string
+  /** @deprecated — pin-функционал удалён, проп игнорируется */
   pinTitle?: string
   zIndexOverride?: number
   /**
-   * When true: drag handle becomes a transparent overlay (no white bar),
-   * close/pin buttons float over the content as white icons.
+   * When true: drag handle becomes a transparent overlay (no white bar).
    * Use when children start with a dark/colored header (e.g. TrinityModalShell).
    */
   darkHeader?: boolean
@@ -41,8 +40,6 @@ const sizeMap: Record<string, string> = {
   xl:   'clamp(320px, 85vw, 576px)',
   full: 'clamp(320px, 80vw, 896px)',
 }
-
-let idCounter = 0
 
 export function Modal({
   open,
@@ -60,122 +57,78 @@ export function Modal({
   className,
   contentClassName,
   dir = 'rtl',
-  modalId: modalIdProp,
-  pinTitle,
   darkHeader = false,
   zIndexOverride,
 }: ModalProps) {
-  const idRef   = useRef<string>(modalIdProp || `modal-${++idCounter}`)
-  const modalId = idRef.current
-
   const [mounted, setMounted] = useState(false)
-
   useEffect(() => { setMounted(true) }, [])
 
-  const { pin, unpin, isPinned, bringToFront, pinned, maxPinned } = usePinnedModals()
-  const pinned_ = isPinned(modalId)
-  const { containerRef, handleRef, resetPosition, getCurrentPosition } = useDraggableDialog()
-  const pinnedData = pinned.find(p => p.id === modalId)
-
-  useEffect(() => {
-    if (pinnedData && containerRef.current) {
-      const left = window.innerWidth / 2 + pinnedData.x
-      const top  = window.innerHeight / 2 + pinnedData.y
-      containerRef.current.style.left      = `${left}px`
-      containerRef.current.style.top       = `${top}px`
-      containerRef.current.style.transform = 'translate(-50%, -50%)'
-    }
-  }, [pinned_])
-
-  const handlePin = useCallback(() => {
-    if (pinned_) {
-      unpin(modalId)
-    } else {
-      const pos    = getCurrentPosition()
-      const canPin = pin({
-        id:     modalId,
-        title:  (typeof pinTitle === 'string' ? pinTitle : typeof title === 'string' ? title : 'Окно'),
-        x:      pos.x,
-        y:      pos.y,
-        zIndex: 9100,
-      })
-      if (!canPin && containerRef.current) {
-        containerRef.current.classList.add('animate-shake')
-        setTimeout(() => containerRef.current?.classList.remove('animate-shake'), 500)
-      }
-    }
-  }, [pinned_, pin, unpin, modalId, title, pinTitle, getCurrentPosition])
+  const { containerRef, handleRef, resetPosition } = useDraggableDialog()
 
   const handleEscape = useCallback(
-    (e: KeyboardEvent) => { if (e.key === 'Escape' && closeOnEscape && !pinned_) onClose() },
-    [closeOnEscape, onClose, pinned_]
+    (e: KeyboardEvent) => { if (e.key === 'Escape' && closeOnEscape) onClose() },
+    [closeOnEscape, onClose]
   )
 
   useEffect(() => {
     if (open) {
       document.addEventListener('keydown', handleEscape)
-      if (!pinned_) document.body.style.overflow = 'hidden'
+      document.body.style.overflow = 'hidden'
     }
     return () => {
       document.removeEventListener('keydown', handleEscape)
       document.body.style.overflow = ''
     }
-  }, [open, handleEscape, pinned_])
+  }, [open, handleEscape])
 
   useEffect(() => {
-    if (!open && !pinned_) resetPosition()
+    if (!open) resetPosition()
   }, [open])
 
-  if (!open && !pinned_) return null
+  if (!open) return null
   if (!mounted) return null
 
-  const zIndex   = zIndexOverride ?? (pinnedData ? pinnedData.zIndex : 9000)
+  const zIndex   = zIndexOverride ?? 9000
   const maxWidth = width ? `clamp(320px, ${width}, calc(100vw - 32px))` : (sizeMap[size] ?? sizeMap.md)
 
-  // ── Close button: absolute inside modal, top corner per dir ──────────────
-  // RTL → top-left corner (inset-inline-start)
-  // LTR → top-right corner (inset-inline-end)
-  // Placed as absolute child so it's always visible regardless of modal position.
-  const closeBtnBase: React.CSSProperties = {
-    position:       'absolute',
-    top:            10,
-    zIndex:         20,
-    width:          34,
-    height:         34,
-    borderRadius:   '50%',
-    background:     'rgba(0,0,0,0.55)',
-    border:         'none',
-    color:          '#fff',
-    cursor:         'pointer',
-    display:        'none', // shown only on desktop via inline override in JSX
-    alignItems:     'center',
-    justifyContent: 'center',
-    boxShadow:      '0 2px 8px rgba(0,0,0,0.35)',
-    transition:     'transform 0.15s, background 0.15s',
-    pointerEvents:  'auto',
-    // dir-aware corner:
-    ...(dir === 'rtl'
-      ? { left: 10, right: 'auto' }
-      : { right: 10, left: 'auto' }),
+  // ── Close button style ────────────────────────────────────────────────────
+  // position: absolute inside modal container.
+  // Тёмный фон (#3d4a5c) — хорошо виден и над тёмным sidebar, и над светлым content.
+  // RTL → top-left; LTR → top-right.
+  const closeBtnStyle: React.CSSProperties = {
+    position:        'absolute',
+    top:             10,
+    zIndex:          30,
+    width:           32,
+    height:          32,
+    borderRadius:    '50%',
+    background:      '#3d4a5c',
+    border:          '2px solid rgba(255,255,255,0.18)',
+    color:           '#fff',
+    cursor:          'pointer',
+    display:         'flex',
+    alignItems:      'center',
+    justifyContent:  'center',
+    boxShadow:       '0 2px 10px rgba(0,0,0,0.4)',
+    transition:      'transform 0.15s, background 0.15s',
+    pointerEvents:   'auto',
+    ...(dir === 'rtl' ? { left: 10, right: 'auto' } : { right: 10, left: 'auto' }),
   }
 
   return createPortal(
     <>
       {/* Backdrop */}
-      {!pinned_ && (
-        <div
-          className="fixed inset-0 bg-black/50"
-          style={{ zIndex: zIndexOverride ? zIndexOverride - 1 : 8999 }}
-          data-trinity-modal-backdrop=""
-          onClick={closeOnBackdrop ? onClose : undefined}
-          aria-hidden="true"
-        />
-      )}
+      <div
+        className="fixed inset-0 bg-black/50"
+        style={{ zIndex: zIndexOverride ? zIndexOverride - 1 : 8999 }}
+        data-trinity-modal-backdrop=""
+        onClick={closeOnBackdrop ? onClose : undefined}
+        aria-hidden="true"
+      />
 
-      {/* Modal container — overflow: visible so close btn can peek out */}
+      {/* Modal container */}
       <div
         ref={containerRef}
-        onMouseDown={() => pinned_ && bringToFront(modalId)}
         data-trinity-modal-wrapper=""
         className={cn(
           'fixed bg-white dark:bg-gray-900 shadow-2xl pointer-events-auto flex flex-col',
@@ -183,7 +136,6 @@ export function Modal({
           'rounded-2xl',
           'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
           'max-h-[92dvh] md:max-h-[calc(100dvh-32px)]',
-          pinned_ && 'ring-2 ring-orange-400/60',
           className
         )}
         data-desktop="true"
@@ -193,11 +145,11 @@ export function Modal({
           maxWidth,
           marginInline: 'auto',
           overflowWrap: 'break-word',
-          overflow:     'visible',   // ← was 'hidden'; now close btn is never clipped
+          overflow:     'visible',
           position:     'fixed',
         }}
         role="dialog"
-        aria-modal={!pinned_}
+        aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
         dir={dir}
       >
@@ -213,29 +165,15 @@ export function Modal({
               className="hidden md:block absolute inset-x-0 top-0 h-8 cursor-grab active:cursor-grabbing select-none z-10"
               style={{ background: 'transparent' }}
             />
-
-            {/* Pin button */}
-            <div
-              className="absolute top-2.5 z-20 flex items-center gap-0.5"
-              style={{ [dir === 'rtl' ? 'left' : 'right']: '10px' }}
-            >
-              {headerActions && (
-                <div className="flex items-center gap-0.5 me-0.5">{headerActions}</div>
-              )}
-              <button
-                onClick={handlePin}
-                title={pinned_ ? 'Открепить' : 'Закрепить'}
-                className={cn(
-                  'hidden md:flex p-1.5 rounded-full transition-colors',
-                  pinned_
-                    ? 'bg-orange-400/30 text-orange-200 hover:bg-orange-400/50'
-                    : 'text-white/40 hover:text-white/90 hover:bg-white/20'
-                )}
+            {/* headerActions (если есть) */}
+            {headerActions && (
+              <div
+                className="absolute top-2.5 z-20 flex items-center gap-0.5"
+                style={{ [dir === 'rtl' ? 'left' : 'right']: '10px' }}
               >
-                {pinned_ ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
-              </button>
-            </div>
-
+                {headerActions}
+              </div>
+            )}
             <div className={cn('flex-1 overflow-y-auto', contentClassName)}>
               {children}
             </div>
@@ -249,34 +187,19 @@ export function Modal({
             >
               <GripHorizontal className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 transition-colors" />
             </div>
-
-            {(title || showCloseButton) && (
+            {title && (
               <div className="flex items-start justify-between px-5 pb-0 pt-1">
                 <div className="flex-1 min-w-0 pt-1">
-                  {title && (
-                    <h2 id="modal-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100 leading-tight">
-                      {title}
-                    </h2>
-                  )}
+                  <h2 id="modal-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100 leading-tight">
+                    {title}
+                  </h2>
                   {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>}
                 </div>
-                <div className="flex items-center gap-1 -mt-1 -mr-1">
-                  <button
-                    onClick={handlePin}
-                    title={pinned_ ? 'Открепить' : (pinned.length >= maxPinned ? 'Максимум 3 окна' : 'Закрепить')}
-                    className={cn(
-                      'hidden md:flex p-1.5 rounded-full transition-colors',
-                      pinned_
-                        ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-500 hover:bg-orange-200'
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-300 hover:text-gray-500'
-                    )}
-                  >
-                    {pinned_ ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
-                  </button>
-                </div>
+                {headerActions && (
+                  <div className="flex items-center gap-1 -mt-1 -me-1">{headerActions}</div>
+                )}
               </div>
             )}
-
             <div
               className={cn('flex-1 overflow-y-auto p-5', footer && 'pb-3', contentClassName)}
               style={{ overflow: 'hidden auto' }}
@@ -292,26 +215,28 @@ export function Modal({
           </div>
         )}
 
-        {/* ── Close button — absolute inside modal, always visible ──────────
-            desktop only (hidden on mobile — ModalBottomSheet has its own).
-            RTL → top-left corner; LTR → top-right corner.
-        ─────────────────────────────────────────────────────────────────── */}
-        {showCloseButton && !pinned_ && (
+        {/* ── Close button — desktop only, always visible ───────────────────
+            RTL → top-left; LTR → top-right.
+            Тёмный фон виден и над тёмным sidebar, и над светлым content.
+        ──────────────────────────────────────────────────────────────────── */}
+        {showCloseButton && (
           <button
             onClick={onClose}
             aria-label="Закрыть"
             className="hidden md:flex"
-            style={closeBtnBase}
+            style={closeBtnStyle}
             onMouseEnter={e => {
-              ;(e.currentTarget as HTMLButtonElement).style.transform  = 'scale(1.12)'
-              ;(e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.75)'
+              const b = e.currentTarget as HTMLButtonElement
+              b.style.transform  = 'scale(1.12)'
+              b.style.background = '#2c3a4a'
             }}
             onMouseLeave={e => {
-              ;(e.currentTarget as HTMLButtonElement).style.transform  = 'scale(1)'
-              ;(e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.55)'
+              const b = e.currentTarget as HTMLButtonElement
+              b.style.transform  = 'scale(1)'
+              b.style.background = '#3d4a5c'
             }}
           >
-            <X size={18} strokeWidth={2.5} />
+            <X size={16} strokeWidth={2.5} />
           </button>
         )}
       </div>

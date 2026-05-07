@@ -8,7 +8,6 @@ import { BranchProvider } from '@/contexts/BranchContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { GlobalSearch } from '@/components/GlobalSearch'
 import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner'
-import { PinnedModalsTray } from '@/components/ui/PinnedModalsTray'
 import { RightPanel } from '@/components/layout/RightPanel'
 import { DemoBannerGlobal } from '@/components/demo/DemoBannerGlobal'
 import { DemoLimitGuardProvider } from '@/components/demo/DemoLimitGuard'
@@ -215,7 +214,6 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-        <PinnedModalsTray />
         <ClientProviders />
       </DemoLimitGuardProvider>
     </WaNotificationProvider>

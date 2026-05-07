@@ -34,12 +34,12 @@ interface ModalProps {
   darkHeader?: boolean
 }
 
-const sizeClasses = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
-  xl: 'max-w-xl',
-  full: 'max-w-4xl',
+const sizeMap: Record<string, string> = {
+  sm:   'clamp(320px, 90vw, 384px)',
+  md:   'clamp(320px, 90vw, 448px)',
+  lg:   'clamp(320px, 85vw, 512px)',
+  xl:   'clamp(320px, 85vw, 576px)',
+  full: 'clamp(320px, 80vw, 896px)',
 }
 
 let idCounter = 0
@@ -65,35 +65,24 @@ export function Modal({
   darkHeader = false,
   zIndexOverride,
 }: ModalProps) {
-  const idRef = useRef<string>(modalIdProp || `modal-${++idCounter}`)
+  const idRef   = useRef<string>(modalIdProp || `modal-${++idCounter}`)
   const modalId = idRef.current
 
   const [mounted, setMounted] = useState(false)
-  const [isDesktop, setIsDesktop] = useState(false)
 
-  useEffect(() => {
-    setMounted(true)
-    const mq = window.matchMedia('(min-width: 768px)')
-    setIsDesktop(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
+  useEffect(() => { setMounted(true) }, [])
 
   const { pin, unpin, isPinned, bringToFront, pinned, maxPinned } = usePinnedModals()
   const pinned_ = isPinned(modalId)
   const { containerRef, handleRef, resetPosition, getCurrentPosition } = useDraggableDialog()
-
   const pinnedData = pinned.find(p => p.id === modalId)
-  // wrapperRef wraps modal + floating close button so they move together when dragged
-  const wrapperRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (pinnedData && containerRef.current) {
       const left = window.innerWidth / 2 + pinnedData.x
-      const top = window.innerHeight / 2 + pinnedData.y
-      containerRef.current.style.left = `${left}px`
-      containerRef.current.style.top = `${top}px`
+      const top  = window.innerHeight / 2 + pinnedData.y
+      containerRef.current.style.left      = `${left}px`
+      containerRef.current.style.top       = `${top}px`
       containerRef.current.style.transform = 'translate(-50%, -50%)'
     }
   }, [pinned_])
@@ -102,12 +91,12 @@ export function Modal({
     if (pinned_) {
       unpin(modalId)
     } else {
-      const pos = getCurrentPosition()
+      const pos    = getCurrentPosition()
       const canPin = pin({
-        id: modalId,
-        title: (typeof pinTitle === 'string' ? pinTitle : typeof title === 'string' ? title : 'Окно'),
-        x: pos.x,
-        y: pos.y,
+        id:     modalId,
+        title:  (typeof pinTitle === 'string' ? pinTitle : typeof title === 'string' ? title : 'Окно'),
+        x:      pos.x,
+        y:      pos.y,
         zIndex: 9100,
       })
       if (!canPin && containerRef.current) {
@@ -137,12 +126,31 @@ export function Modal({
     if (!open && !pinned_) resetPosition()
   }, [open])
 
-  // No JS positioning needed — floating button is CSS-positioned via wrapper
-
   if (!open && !pinned_) return null
   if (!mounted) return null
 
-  const zIndex = zIndexOverride ?? (pinnedData ? pinnedData.zIndex : 9000)
+  const zIndex   = zIndexOverride ?? (pinnedData ? pinnedData.zIndex : 9000)
+  const maxWidth = width ? `clamp(320px, ${width}, calc(100vw - 32px))` : (sizeMap[size] ?? sizeMap.md)
+
+  // Close button offset: sits at the corner, half outside the modal box
+  // RTL → top-left outside; LTR → top-right outside
+  const closeBtnStyle: React.CSSProperties = {
+    position:        'fixed',
+    zIndex:          zIndex + 20,
+    width:           40,
+    height:          40,
+    borderRadius:    '50%',
+    background:      '#3c3c3c',
+    border:          'none',
+    color:           '#fff',
+    cursor:          'pointer',
+    display:         'flex',
+    alignItems:      'center',
+    justifyContent:  'center',
+    boxShadow:       '0 4px 20px rgba(0,0,0,0.5)',
+    transition:      'transform 0.15s, background 0.15s',
+    pointerEvents:   'auto',
+  }
 
   return createPortal(
     <>
@@ -157,52 +165,41 @@ export function Modal({
         />
       )}
 
-      {/* Modal container — overflow:visible so floating close btn can peek outside */}
+      {/* Modal container */}
       <div
         ref={containerRef}
         onMouseDown={() => pinned_ && bringToFront(modalId)}
         data-trinity-modal-wrapper=""
         className={cn(
-          'fixed pointer-events-auto',
+          'fixed bg-white dark:bg-gray-900 shadow-2xl pointer-events-auto flex flex-col',
           'animate-in fade-in-0 duration-200',
+          'rounded-2xl overflow-hidden',
           'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
-          pinned_ && 'ring-2 ring-orange-400/60 rounded-2xl',
+          'max-h-[92dvh] md:max-h-[calc(100dvh-32px)]',
+          pinned_ && 'ring-2 ring-orange-400/60',
           className
         )}
-        data-desktop={isDesktop ? 'true' : undefined}
+        data-desktop="true"
         style={{
           zIndex,
-          width: '95%',
-          maxWidth: width
-            ? `clamp(320px, ${width}, calc(100vw - 32px))`
-            : sizeClasses[size] === 'max-w-sm'  ? 'clamp(320px, 90vw, 384px)'
-            : sizeClasses[size] === 'max-w-md'  ? 'clamp(320px, 90vw, 448px)'
-            : sizeClasses[size] === 'max-w-lg'  ? 'clamp(320px, 85vw, 512px)'
-            : sizeClasses[size] === 'max-w-xl'  ? 'clamp(320px, 85vw, 576px)'
-            : 'clamp(320px, 80vw, 896px)',
-          marginInline: 'auto',
-          overflow: 'visible',
+          width:          '95%',
+          maxWidth,
+          marginInline:   'auto',
+          overflowWrap:   'break-word',
         }}
         role="dialog"
         aria-modal={!pinned_}
         aria-labelledby={title ? 'modal-title' : undefined}
         dir={dir}
       >
-        {/* Inner wrapper — clipping, bg, shadow, scroll height */}
-        <div className="flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-gray-900 shadow-2xl max-h-[92dvh] md:max-h-[calc(100dvh-32px)]" style={{ overflowWrap: 'break-word' }}>
         {darkHeader ? (
-          /* ── Dark header mode ────────────────────────────────────────────
-             Drag handle is a transparent zone over the dark header.
-             Close/Pin buttons float as white icons in the top corner.
-          ─────────────────────────────────────────────────────────────── */
+          /* ── Dark header mode ── */
           <div className="relative flex-1 flex flex-col min-h-0 overflow-hidden rounded-2xl">
-            {/* Transparent drag zone — sits over the dark header */}
             <div
               ref={handleRef}
               className="hidden md:block absolute inset-x-0 top-0 h-8 cursor-grab active:cursor-grabbing select-none z-10"
               style={{ background: 'transparent' }}
             />
-            {/* Floating close / pin — white icons, top corner */}
             <div
               className="absolute top-2.5 z-20 flex items-center gap-0.5"
               style={{ [dir === 'rtl' ? 'left' : 'right']: '10px' }}
@@ -223,16 +220,13 @@ export function Modal({
                 {pinned_ ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
               </button>
             </div>
-
-            {/* Scrollable content */}
             <div className={cn('flex-1 overflow-y-auto', contentClassName)}>
               {children}
             </div>
           </div>
         ) : (
-          /* ── Normal (light) mode ─────────────────────────────────────── */
+          /* ── Normal (light) mode ── */
           <>
-            {/* Drag handle */}
             <div
               ref={handleRef}
               className="hidden md:flex items-center justify-center h-5 rounded-t-2xl cursor-grab active:cursor-grabbing select-none group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -240,7 +234,6 @@ export function Modal({
               <GripHorizontal className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 transition-colors" />
             </div>
 
-            {/* Title header */}
             {(title || showCloseButton) && (
               <div className="flex items-start justify-between px-5 pb-0 pt-1">
                 <div className="flex-1 min-w-0 pt-1">
@@ -264,60 +257,119 @@ export function Modal({
                   >
                     {pinned_ ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
                   </button>
-                  {/* close button moved to floating button outside modal */}
                 </div>
               </div>
             )}
 
-            {/* Content */}
             <div className={cn('flex-1 overflow-y-auto p-5', footer && 'pb-3', contentClassName)}>
               {children}
             </div>
           </>
         )}
 
-        {/* Footer — always outside the dark/normal split */}
         {footer && (
           <div className="flex-shrink-0 p-5 pt-3 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-b-2xl">
             {footer}
           </div>
         )}
-        </div>{/* /inner overflow-hidden wrapper */}
+      </div>
 
-      {/* Floating close button — absolutely positioned outside the modal box */}
-      {showCloseButton && !pinned_ && isDesktop && (
-        <button
-          onClick={onClose}
-          aria-label="Close"
-          className="trinity-modal-close-btn"
-          style={{
-            position:       'absolute',
-            top:            '-16px',
-            [dir === 'rtl' ? 'left' : 'right']: '-16px',
-            zIndex:         10,
-            width:          40,
-            height:         40,
-            borderRadius:   '50%',
-            background:     '#3c3c3c',
-            border:         'none',
-            color:          '#ffffff',
-            cursor:         'pointer',
-            display:        'flex',
-            alignItems:     'center',
-            justifyContent: 'center',
-            boxShadow:      '0 4px 20px rgba(0,0,0,0.45)',
-            transition:     'transform 0.15s, background 0.15s',
-            flexShrink:     0,
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.1)'; (e.currentTarget as HTMLButtonElement).style.background = '#555' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';   (e.currentTarget as HTMLButtonElement).style.background = '#3c3c3c' }}
-        >
-          <X size={20} strokeWidth={2.5} />
-        </button>
+      {/* ── Floating close button ──────────────────────────────────────────────
+          Renders as a separate portal child (sibling to the modal box).
+          Uses fixed positioning and a PositionSyncer to stay glued to the
+          modal's corner. Works on desktop only (hidden on mobile via CSS).
+          Uses a small ResizeObserver-free approach: reads coords after paint.
+      ──────────────────────────────────────────────────────────────────────── */}
+      {showCloseButton && !pinned_ && (
+        <FloatingCloseButton
+          containerRef={containerRef}
+          onClose={onClose}
+          dir={dir}
+          style={closeBtnStyle}
+        />
       )}
-      </div>{/* /containerRef */}
     </>,
     document.body
+  )
+}
+
+// ── FloatingCloseButton ────────────────────────────────────────────────────
+// Separate component so it can use its own effect cleanly.
+// Positions itself relative to the modal box via getBoundingClientRect,
+// but re-reads on every animation frame while visible — so it always
+// follows the modal even when the user drags it.
+function FloatingCloseButton({
+  containerRef,
+  onClose,
+  dir,
+  style,
+}: {
+  containerRef: React.RefObject<HTMLDivElement | null>
+  onClose: () => void
+  dir: string
+  style: React.CSSProperties
+}) {
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const rafRef = useRef<number>(0)
+
+  useEffect(() => {
+    const btn   = btnRef.current
+    const modal = containerRef.current
+    if (!btn || !modal) return
+
+    const sync = () => {
+      const rect     = modal.getBoundingClientRect()
+      const isMobile = window.innerWidth < 768
+      // Hide on mobile or when modal has no size yet
+      if (rect.width === 0 || isMobile) {
+        btn.style.opacity       = '0'
+        btn.style.pointerEvents = 'none'
+        rafRef.current = requestAnimationFrame(sync)
+        return
+      }
+      const btnSize = 40
+      const half    = btnSize / 2
+
+      btn.style.top    = `${rect.top - half}px`
+      if (dir === 'rtl') {
+        btn.style.left  = `${rect.left - half}px`
+        btn.style.right = 'auto'
+      } else {
+        btn.style.left  = `${rect.right - half}px`
+        btn.style.right = 'auto'
+      }
+      btn.style.opacity       = '1'
+      btn.style.pointerEvents = 'auto'
+      rafRef.current = requestAnimationFrame(sync)
+    }
+
+    rafRef.current = requestAnimationFrame(sync)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [containerRef, dir])
+
+  return (
+    <button
+      ref={btnRef}
+      onClick={onClose}
+      aria-label="Закрыть"
+      style={{
+        ...style,
+        // Start invisible; sync() will make it visible after first rect read
+        opacity:       0,
+        pointerEvents: 'none',
+        // Hide on mobile via media query workaround — we set display directly
+      }}
+      onMouseEnter={e => {
+        ;(e.currentTarget as HTMLButtonElement).style.transform  = 'scale(1.12)'
+        ;(e.currentTarget as HTMLButtonElement).style.background = '#555'
+      }}
+      onMouseLeave={e => {
+        ;(e.currentTarget as HTMLButtonElement).style.transform  = 'scale(1)'
+        ;(e.currentTarget as HTMLButtonElement).style.background = '#3c3c3c'
+      }}
+    >
+      <X size={20} strokeWidth={2.5} />
+    </button>
   )
 }
 

@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
@@ -96,7 +96,8 @@ export function PaymentDetailsDrawer({
       noPhone: 'אין מספר טלפון', close: 'סגור', description: 'תיאור', phone: 'טלפון',
       items: 'פריטים', total: 'סה״כ', saleId: 'מספר עסקה',
       notes: 'הערות', purchaseDate: 'תאריך רכישה', actions: 'פעולות',
-      delete: 'מחק תשלום',
+      delete: 'מחק תשלום', deleteSuccess: 'התשלום נמחק', deleteError: 'שגיאה במחיקה',
+      deleteConfirm: 'למחוק את התשלום?',
     },
     ru: {
       method: 'Способ оплаты', type: 'Тип', tranzilaId: 'Tranzila ID',
@@ -110,7 +111,8 @@ export function PaymentDetailsDrawer({
       noPhone: 'Нет телефона', close: 'Закрыть', description: 'Описание', phone: 'Телефон',
       items: 'Позиции', total: 'Итого', saleId: 'Номер сделки',
       notes: 'Примечания', purchaseDate: 'Дата покупки', actions: 'Действия',
-      delete: 'Удалить платёж',
+      delete: 'Удалить платёж', deleteSuccess: 'Платёж удалён', deleteError: 'Ошибка удаления',
+      deleteConfirm: 'Удалить платёж?',
     },
   }
   const l = L[locale]
@@ -176,16 +178,33 @@ export function PaymentDetailsDrawer({
     finally { setRefunding(false) }
   }
 
-  // ── Payment link actions (for pending Tranzila payments) ────────────────────
+  // ── Delete pending/failed payment ───────────────────────────────────────────
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const canDeletePayment = payment.status === 'pending' || payment.status === 'failed' || payment.status === 'cancelled'
+
+  const handleDeletePayment = async () => {
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/payments/${payment.id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error || l.deleteError); return }
+      toast.success(l.deleteSuccess)
+      setConfirmDelete(false)
+      onDeleted?.()
+      onClose()
+    } catch { toast.error(l.deleteError) }
+    finally { setDeleting(false) }
+  }
+
+  // ── Payment link actions ────────────────────────────────────────────────────
   const paymentLink: string | null = payment.payment_link || null
   const isPendingWithLink = payment.status === 'pending' && !!paymentLink
   const isCompletedStatus = payment.status === 'completed' || payment.status === 'paid'
 
-  // Общий контент (Info Panel) — используется и на мобиле и на ПК
   const statusDotColor = sc.dot
   const infoContent = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* Amount hero */}
       <div style={{ borderRadius: 16, padding: '18px 16px', textAlign: 'center',
         background: `${statusDotColor}18`, border: `1px solid ${statusDotColor}30` }}>
         <div style={{ fontSize: 40, fontWeight: 900, color: statusDotColor, letterSpacing: '-2px', lineHeight: 1, marginBottom: 8 }}>
@@ -197,8 +216,6 @@ export function PaymentDetailsDrawer({
           <span style={{ fontSize: 12, fontWeight: 700, color: statusDotColor }}>{statusLabel[payment.status] || payment.status}</span>
         </div>
       </div>
-
-      {/* Date + Method */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <div style={{ borderRadius: 12, padding: '10px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 6 }}>{l.purchaseDate}</div>
@@ -219,16 +236,12 @@ export function PaymentDetailsDrawer({
           </div>
         </div>
       </div>
-
-      {/* Type */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         padding: '9px 12px', borderRadius: 10,
         background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
         <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)' }}>{l.type}</span>
         <span style={{ fontSize: 12, fontWeight: 600, color: 'white' }}>{typeLabel}</span>
       </div>
-
-      {/* Phone */}
       {clientPhone && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '9px 12px', borderRadius: 10,
@@ -240,8 +253,6 @@ export function PaymentDetailsDrawer({
           <span style={{ fontSize: 12, fontWeight: 600, color: 'white', fontFamily: 'monospace' }} dir="ltr">{clientPhone}</span>
         </div>
       )}
-
-      {/* Loading / Items */}
       {loadingDetails && (
         <div style={{ borderRadius: 12, padding: 16, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'center' }}>
           <Loader2 size={18} color="rgba(255,255,255,0.3)" style={{ animation: 'spin 1s linear infinite' }} />
@@ -278,17 +289,12 @@ export function PaymentDetailsDrawer({
           </div>
         </div>
       )}
-
-      {/* Notes */}
       {(saleNotes || payment.description) && (
-        <div style={{ padding: '10px 12px', borderRadius: 12,
-          background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
+        <div style={{ padding: '10px 12px', borderRadius: 12, background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
           <div style={{ fontSize: 9, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 5 }}>{saleNotes ? l.notes : l.description}</div>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>{saleNotes || payment.description}</div>
         </div>
       )}
-
-      {/* IDs */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         {tranzilaId && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>{l.tranzilaId}</span><span style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.5)' }}>{tranzilaId}</span></div>}
         {saleId && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>{l.saleId}</span><span style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.5)' }}>{saleId.slice(0, 16)}…</span></div>}
@@ -300,18 +306,17 @@ export function PaymentDetailsDrawer({
     </div>
   )
 
-  // ── Мобиль: TrinityMobDetailShell со свайп-шторкой действий ─────────────────
   if (mounted && isMobile) {
     const linkActions = isPendingWithLink
       ? buildPaymentLinkMobileActions({ paymentLink: paymentLink!, clientPhone, amount: Number(payment.amount), locale })
       : []
     const mobActions = [
       ...linkActions,
-      // Completed: send receipt WA / download PDF / refund
       { icon: <MessageCircle size={13} />, label: l.sendWhatsapp, onClick: handleWhatsApp, variant: 'green' as const, disabled: sendingReceipt, loading: sendingReceipt, hidden: !clientPhone || !isCompletedStatus },
       { icon: <FileText size={13} />, label: l.downloadPdf, onClick: handleDownloadPdf, variant: 'blue' as const, disabled: downloadingPdf, loading: downloadingPdf, hidden: !isCompletedStatus },
       { icon: <RotateCcw size={13} />, label: l.refund, onClick: handleRefund, variant: 'danger' as const, disabled: refunding, loading: refunding, hidden: !(isOwner && isCompletedStatus) },
-      { icon: <Trash2 size={13} />, label: l.delete, onClick: () => { onDeleted?.(); onClose() }, variant: 'danger' as const, hidden: !isSuperAdmin },
+      { icon: <Trash2 size={13} />, label: l.delete, onClick: () => handleDeletePayment(), variant: 'danger' as const, disabled: deleting, loading: deleting, hidden: !canDeletePayment },
+      { icon: <Trash2 size={13} />, label: l.delete + ' (admin)', onClick: () => { onDeleted?.(); onClose() }, variant: 'danger' as const, hidden: canDeletePayment || !isSuperAdmin },
     ]
     return (
       <TrinityMobDetailShell
@@ -329,8 +334,7 @@ export function PaymentDetailsDrawer({
       </TrinityMobDetailShell>
     )
   }
-
-  // ── Десктоп: TrinityModalShell (sidebar + content) ───────────────────────────
+  // ── Десктоп: TrinityModalShell ───────────────────────────────────────────────
   const desktopSidebar = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
@@ -360,11 +364,29 @@ export function PaymentDetailsDrawer({
       {isCompletedStatus && <button onClick={handleDownloadPdf} disabled={downloadingPdf} style={{ padding: '9px 10px', borderRadius: 9, border: '0.5px solid rgba(96,165,250,0.3)', background: 'rgba(96,165,250,0.1)', color: '#60a5fa', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, opacity: downloadingPdf ? 0.6 : 1 }}>{downloadingPdf ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <FileText size={13} />}{l.downloadPdf}</button>}
       {isOwner && isCompletedStatus && <button onClick={handleRefund} disabled={refunding} style={{ padding: '9px 10px', borderRadius: 9, border: '0.5px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.08)', color: 'rgba(239,68,68,0.7)', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>{refunding ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <RotateCcw size={13} />}{l.refund}</button>}
       {isSuperAdmin && <div style={{ marginBottom: 5 }}><AdminDeletePaymentButton paymentId={payment.id} variant="sidebar" onDeleted={() => { onDeleted?.(); onClose() }} /></div>}
+      {canDeletePayment && !isSuperAdmin && (
+        confirmDelete ? (
+          <div style={{ display: 'flex', gap: 6, marginBottom: 5 }}>
+            <button onClick={handleDeletePayment} disabled={deleting}
+              style={{ flex: 1, padding: '9px 10px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, opacity: deleting ? 0.6 : 1 }}>
+              {deleting ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={13} />}
+              {isHe ? 'כן, מחק' : 'Да, удалить'}
+            </button>
+            <button onClick={() => setConfirmDelete(false)} style={{ padding: '9px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 11, cursor: 'pointer' }}>
+              {isHe ? 'לא' : 'Нет'}
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setConfirmDelete(true)}
+            style={{ padding: '9px 10px', borderRadius: 9, border: '0.5px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.1)', color: 'rgba(239,68,68,0.85)', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, width: '100%' }}>
+            <Trash2 size={13} />{l.delete}
+          </button>
+        )
+      )}
       <button onClick={onClose} style={{ padding: '8px 14px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer', marginTop: 2 }}>{l.close}</button>
     </div>
   )
 
-  // Десктоп контент — светлый (оригинальный стиль)
   const desktopContent = (
     <div style={{ padding: '20px 18px 24px' }} className="space-y-4">
       <div style={{ background: sc.bg, border: `1px solid ${sc.border}`, borderRadius: 16, padding: '20px', textAlign: 'center' }}>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import {
   Package, Wrench, Receipt, CheckCircle2, Clock,
   AlertCircle, Ban, TrendingUp, Hash, ShoppingBag, CreditCard, Trash2, Wallet,
@@ -29,7 +30,8 @@ const T = {
     unpaid_status: 'לא שולם',
     refunded_status: 'הוחזר', cancelled_status: 'בוטל',
     receipt_sent: 'חשבונית נשלחה', receipt_not_sent: 'חשבונית לא נשלחה',
-    goToPayments: 'עבור לתשלומים', delete: 'מחק', actions: 'פעולות',
+    goToPayments: 'עבור לתשלומים', delete: 'מחק עסקה', actions: 'פעולות',
+    deleteConfirm: 'למחוק עסקה זו?', deleteSuccess: 'העסקה נמחקה', deleteError: 'שגיאה במחיקה',
     payBalance: 'שלם יתרה', payNow: 'שנה אמצעי תשלום',
     awaitingLinkPayment: 'ממתין לתשלום בקישור',
     methodNotSet: 'לא צוין',
@@ -46,7 +48,8 @@ const T = {
     unpaid_status: 'Не оплачено',
     refunded_status: 'Возврат', cancelled_status: 'Отменено',
     receipt_sent: 'Чек отправлен', receipt_not_sent: 'Чек не выбит',
-    goToPayments: 'Перейти в Платежи', delete: 'Удалить', actions: 'Действия',
+    goToPayments: 'Перейти в Платежи', delete: 'Удалить сделку', actions: 'Действия',
+    deleteConfirm: 'Удалить эту сделку?', deleteSuccess: 'Сделка удалена', deleteError: 'Ошибка удаления',
     payBalance: 'Оплатить остаток', payNow: 'Изменить способ оплаты',
     awaitingLinkPayment: 'Ожидает оплаты по ссылке',
     methodNotSet: 'Не указан',
@@ -97,6 +100,8 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
   const [mounted, setMounted] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [payDialogOpen, setPayDialogOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDeleteSale, setConfirmDeleteSale] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -117,19 +122,9 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
 
   const st          = STATUS_CONFIG[sale.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.new
   const statusLabel = t[`${sale.status}_status` as keyof typeof t] || sale.status
-
-  // ── Payment link detection — для sale со ссылкой на оплату (pending Tranzila) ─
-  // Триггер ошибки, который мы чиним: `t[null] || null || t.cash` = «Наличные»
-  // для sale, у которой реально ещё нет оплаты и висит pending-ссылка.
-  // Ищем именно pending-платёж со ссылкой — completed-платежи со ссылкой
-  // (уже оплаченные через Tranzila) сюда не попадают.
   const pendingLink = sale.payments?.find(p => !!p.payment_link && p.status === 'pending')?.payment_link || null
   const isAwaitingLink = (sale.status === 'unpaid' || sale.status === 'new') && !!pendingLink
 
-  // Честное отображение метода:
-  //   1. Если sale ждёт оплаты по ссылке → «Ожидает оплаты по ссылке» (не "Наличные")
-  //   2. Если есть реальный payment_method в БД → локаль (cash/card/bit/transfer/credit_card)
-  //   3. Если payment_method пуст/неизвестен → «Не указан» (не "Наличные")
   let methodLabel: string
   let methodIcon: React.ReactNode
   if (isAwaitingLink) {
@@ -139,7 +134,6 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
     methodLabel = String(t[sale.payment_method as keyof typeof t])
     methodIcon = <span style={{ fontSize: 18 }}>{METHOD_ICON[sale.payment_method] || '💵'}</span>
   } else if (sale.payment_method) {
-    // Неизвестный метод — показываем как есть, без лжи про «Наличные»
     methodLabel = sale.payment_method
     methodIcon = <span style={{ fontSize: 18 }}>💳</span>
   } else {
@@ -156,6 +150,23 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
 
   const needsPayment = sale.status === 'unpaid' || sale.status === 'partial'
   const remaining    = Math.max(0, total - paid)
+  const canDeleteSale = sale.status === 'unpaid' || sale.status === 'new'
+
+  const handleDeleteSale = async () => {
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/sales/${sale.id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error || t.deleteError); return }
+      toast.success(t.deleteSuccess)
+      setConfirmDeleteSale(false)
+      queryClient.invalidateQueries({ queryKey: ['sales'] })
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      onClose()
+    } catch { toast.error(t.deleteError) }
+    finally { setDeleting(false) }
+  }
+
   const handleDelete = () => { onClose(); queryClient.invalidateQueries({ queryKey: ['sales'] }) }
   const handlePayDialogClose = (open: boolean) => {
     setPayDialogOpen(open)
@@ -165,10 +176,9 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
     }
   }
 
-  // ── Общий контент (тёмный стиль — используется и на мобиле и как основа) ──
+  // ── Общий контент (тёмный стиль) ──
   const sharedContent = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* Amount hero */}
       <div style={{ borderRadius: 16, padding: '18px 16px', textAlign: 'center', background: `${st.color}18`, border: `1px solid ${st.color}30` }}>
         <div style={{ fontSize: 40, fontWeight: 900, color: st.color, letterSpacing: '-2px', lineHeight: 1, marginBottom: 8 }}>₪{total.toLocaleString()}</div>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 14px', borderRadius: 20, background: `${st.color}20`, border: `1px solid ${st.color}40` }}>
@@ -176,21 +186,18 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
           <span style={{ fontSize: 12, fontWeight: 700, color: st.color }}>{String(statusLabel)}</span>
         </div>
       </div>
-      {/* Progress bar */}
       <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${paidPct}%`, background: `linear-gradient(90deg,${st.barColor}99,${st.barColor})`, borderRadius: 3 }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>
         <span>{t.paid}: ₪{paid.toLocaleString()}</span><span>{paidPct}%</span>
       </div>
-      {/* Balance */}
       {balance > 0 && (
         <div style={{ background: 'rgba(251,191,36,0.1)', border: '0.5px solid rgba(251,191,36,0.25)', borderRadius: 10, padding: '8px 12px', display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 12, color: '#fbbf24' }}>{t.balance}</span>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#fbbf24' }}>₪{balance.toLocaleString()}</span>
         </div>
       )}
-      {/* Method + Receipt */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <div style={{ borderRadius: 12, padding: '10px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 6 }}>{t.method}</div>
@@ -209,8 +216,6 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
           </div>
         </div>
       </div>
-
-      {/* Items */}
       {sale.sale_items && sale.sale_items.length > 0 && (
         <div>
           <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 7 }}>{t.items}</div>
@@ -238,14 +243,12 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
           </div>
         </div>
       )}
-      {/* Notes */}
       {sale.notes && (
         <div style={{ padding: '10px 12px', borderRadius: 12, background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
           <div style={{ fontSize: 9, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 5 }}>{t.notes}</div>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>{sale.notes}</div>
         </div>
       )}
-      {/* ID */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 2px' }}>
         <Hash size={9} color="rgba(255,255,255,0.2)" />
         <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', fontFamily: 'monospace' }}>{sale.id}</span>
@@ -253,7 +256,6 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
     </div>
   )
 
-  // ── PaymentDialog — общий для моб и десктоп ──────────────────────────────
   const payDialog = (
     <UnifiedPaymentDialog
       open={payDialogOpen}
@@ -290,7 +292,8 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
         variant: 'purple' as const,
         hidden: !sale.payment_id,
       },
-      { icon: <Trash2 size={13} />, label: t.delete, onClick: handleDelete, variant: 'danger' as const },
+      { icon: <Trash2 size={13} />, label: t.delete, onClick: () => handleDeleteSale(), variant: 'danger' as const, disabled: deleting, loading: deleting, hidden: !canDeleteSale },
+      { icon: <Trash2 size={13} />, label: t.delete + ' (admin)', onClick: handleDelete, variant: 'danger' as const, hidden: canDeleteSale },
     ]
     return (
       <>
@@ -346,14 +349,12 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
         {methodIcon}
         <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>{String(methodLabel)}</span>
       </div>
-      {/* Payment link actions — только для sale со ссылкой на оплату в pending */}
       {isAwaitingLink && pendingLink && (
         <>
           <PaymentLinkActions paymentLink={pendingLink} clientPhone={sale.clients?.phone ?? null} amount={total} locale={locale} />
           <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.07)', margin: '6px 0 8px' }} />
         </>
       )}
-      {/* Кнопка "Оплатить" — только для unpaid/partial */}
       {needsPayment && (
         <button onClick={() => setPayDialogOpen(true)}
           style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 10px', background: 'linear-gradient(135deg,#22c55e,#16a34a)', border: 'none', borderRadius: 10, marginBottom: 8, cursor: 'pointer', width: '100%', boxShadow: '0 3px 10px rgba(34,197,94,0.35)' }}>
@@ -373,6 +374,27 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
       )}
       <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.07)', marginBottom: 10 }} />
       <AdminDeleteButton type="sale" id={sale.id} onDeleted={handleDelete} />
+      {canDeleteSale && (
+        confirmDeleteSale ? (
+          <div style={{ display: 'flex', gap: 6, marginBottom: 5, marginTop: 5 }}>
+            <button onClick={handleDeleteSale} disabled={deleting}
+              style={{ flex: 1, padding: '9px 10px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, opacity: deleting ? 0.6 : 1 }}>
+              {deleting
+                ? <svg style={{ animation: 'spin 1s linear infinite', width: 13, height: 13 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
+                : <Trash2 size={13} />}
+              {locale === 'he' ? 'כן, מחק' : 'Да, удалить'}
+            </button>
+            <button onClick={() => setConfirmDeleteSale(false)} style={{ padding: '9px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 11, cursor: 'pointer' }}>
+              {locale === 'he' ? 'לא' : 'Нет'}
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setConfirmDeleteSale(true)}
+            style={{ padding: '9px 10px', borderRadius: 9, border: '0.5px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.1)', color: 'rgba(239,68,68,0.85)', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, marginTop: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, width: '100%' }}>
+            <Trash2 size={13} />{t.delete}
+          </button>
+        )
+      )}
       <button onClick={onClose} style={{ padding: '9px 14px', borderRadius: 10, border: '0.5px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer', marginTop: 6 }}>
         {t.close}
       </button>

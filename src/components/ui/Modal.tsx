@@ -143,18 +143,30 @@ export function Modal({
       const modal = containerRef.current
       const btn   = closeButtonRef.current
       if (!modal || !btn) return
-      const rect = modal.getBoundingClientRect()
-      const btnSize = 44
+      const rect   = modal.getBoundingClientRect()
+      const btnSize = 48
+
       if (dir === 'rtl') {
-        btn.style.left = `${rect.left - btnSize - 12}px`
+        // RTL: левая сторона модалки, немного снаружи, у верхнего края
+        btn.style.left = `${rect.left - btnSize - 16}px`
       } else {
-        btn.style.left = `${rect.right + 12}px`
+        // LTR: правая сторона
+        btn.style.left = `${rect.right + 16}px`
       }
-      btn.style.top = `${rect.top + 16}px`
+      btn.style.top    = `${rect.top + 20}px`
+      btn.style.opacity = '1'
     }
-    updatePos()
+    // double-rAF: wait for CSS transform to settle before reading coordinates
+    let raf1: number, raf2: number
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(updatePos)
+    })
     window.addEventListener('resize', updatePos)
-    return () => window.removeEventListener('resize', updatePos)
+    return () => {
+      cancelAnimationFrame(raf1)
+      cancelAnimationFrame(raf2)
+      window.removeEventListener('resize', updatePos)
+    }
   }, [open, pinned_, dir, mounted])
 
   if (!open && !pinned_) return null
@@ -307,25 +319,26 @@ export function Modal({
         )}
       </div>
 
-      {/* Floating close button — outside the modal, "levitating" beside it */}
+      {/* Floating close button — outside the modal corner, "levitating" */}
       {showCloseButton && !pinned_ && (
         <button
           ref={closeButtonRef}
           onClick={onClose}
           aria-label="Close"
-          className="fixed z-[9999] hidden md:flex items-center justify-center transition-all duration-150 hover:scale-110 active:scale-95"
+          className="fixed z-[9999] hidden md:flex items-center justify-center transition-transform duration-150 hover:scale-110 active:scale-95"
           style={{
-            width:        44,
-            height:       44,
+            width:        48,
+            height:       48,
             borderRadius: '50%',
-            background:   '#3a3a3a',
-            border:       '2px solid rgba(255,255,255,0.12)',
-            color:        '#fff',
+            background:   '#3c3c3c',
+            border:       'none',
+            color:        '#ffffff',
             cursor:       'pointer',
-            boxShadow:    '0 4px 20px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3)',
+            boxShadow:    '0 4px 24px rgba(0,0,0,0.5)',
+            opacity:      0,   // hidden until JS positions it
           }}
         >
-          <X size={20} strokeWidth={2.5} />
+          <X size={22} strokeWidth={2.5} />
         </button>
       )}
     </>,

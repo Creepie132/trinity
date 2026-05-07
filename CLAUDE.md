@@ -1,167 +1,272 @@
-# CLAUDE.md — Trinity CRM Operating Instructions
+# CLAUDE.md — Trinity CRM (Web + PWA)
 
-> Этот файл читается ПЕРВЫМ перед любой задачей. Без исключений.
-
----
-
-## 🧠 Главное правило
-
-**Читай файлы. Не угадывай.**
-
-Перед любым изменением:
-1. Прочитай файл который будешь менять
-2. Найди все файлы которые работают с той же таблицей / компонентом / хуком
-3. Только после этого — пиши код
-
-Перед любым исправлением ошибки:
-1. Прочитай реальный вывод ошибки полностью
-2. Найди строку и файл где ошибка
-3. Пойми причину — потом исправляй
-4. Максимум 2 попытки самостоятельно. Если не решено — стоп, доклад Владу.
+> Инструкция для AI-ассистента. Читать **полностью** перед любой задачей.
 
 ---
 
-## 🗂 Структура проекта
+## 🎯 Проект
 
-```
-F:\Amber_solutions_Kira\Trinity\
-├── src/
-│   ├── app/                  # Next.js App Router страницы и API routes
-│   │   ├── (dashboard)/      # Защищённые страницы CRM
-│   │   ├── (marketing)/      # Публичные страницы (лендинг)
-│   │   ├── (worker)/         # Страницы для сотрудников
-│   │   └── api/              # API endpoints
-│   ├── components/           # React компоненты
-│   ├── hooks/                # React хуки
-│   ├── lib/                  # Утилиты, Supabase клиенты, auth
-│   ├── contexts/             # React контексты
-│   ├── types/                # TypeScript типы
-│   └── styles/               # Глобальные стили
-├── docs/
-│   └── TRINITY_DOCS.md       # Полная документация проекта
-├── public/                   # Статические файлы
-├── supabase/                 # SQL миграции
-└── CLAUDE.md                 # Этот файл
-```
+**Trinity CRM** — SaaS CRM для малого бизнеса в Израиле.
+Домен: `ambersol.co.il` · GitHub: `Creepie132/trinity` · Путь: `F:\Amber_solutions_Kira\Trinity`
 
 ---
 
-## 🚀 Деплой — единственный способ
+## 🛠️ Стек технологий
 
-Git работает ТОЛЬКО через PowerShell скрипт с выводом в файл.
-Прямые git команды через Desktop Commander не возвращают вывод — не использовать.
+| Слой | Технология |
+|------|-----------|
+| Frontend | Next.js App Router (v16), React 18, TypeScript |
+| Стили | Tailwind CSS + shadcn/ui + Lucide React |
+| Состояние | TanStack Query v5 (React Query) + Zustand |
+| Backend | Next.js API Routes (serverless) |
+| БД | Supabase (PostgreSQL 15 + RLS + Realtime) |
+| Auth | Supabase Auth (Google OAuth + email/password) |
+| Storage | Supabase Storage |
+| Деплой | Vercel (`push origin main` = production) |
+| Платежи | Tranzila (terminal + invoices API) |
+| Мессенджер | WhatsApp через Whapi.cloud |
 
-```powershell
-# 1. Записать docs\_deploy.ps1:
-Set-Location "F:\Amber_solutions_Kira\Trinity"
-$git = "C:\Program Files\Git\cmd\git.exe"
-& $git add -A 2>&1 | Out-File "docs\_git_result.txt"
-& $git commit -m "тип: описание" 2>&1 | Out-File "docs\_git_result.txt" -Append
-& $git push origin main 2>&1 | Out-File "docs\_git_result.txt" -Append
+---
 
-# 2. Запустить через cmd:
-powershell.exe -ExecutionPolicy Bypass -File F:\Amber_solutions_Kira\Trinity\docs\_deploy.ps1
+## 🔤 Шрифты
 
-# 3. Прочитать результат:
-# read_file → docs\_git_result.txt
-# Убедиться что есть строка: main -> main
+| Контекст | Шрифт |
+|----------|-------|
+| **Trinity CRM (основное приложение)** | **Rubik** (Hebrew-first, все веса) |
+| Hebrew interface | **Rubik** + **Noto Sans Hebrew** |
+| Russian interface | **Rubik** |
+| **Лендинг `/landing`** | **Inter** (изолирован, подключается отдельно) |
 
-# 4. Проверить Vercel MCP → state: BUILDING ✓
+> ⚠️ Шрифт Rubik подключается в `src/app/layout.tsx` для всего app-контекста.
+> Лендинг изолирован через cookie `trinity_page=landing` — у него свой `<html>` без Trinity-провайдеров.
+> **Никогда не добавляй новые шрифты без явного согласования.**
+
+---
+
+## 🗺️ Структура файлов (ключевые пути)
+
 ```
-
-**Важно:**
-- `git push origin main` = сразу production (`ambersol.co.il`), никакого отдельного шага
-- Никогда не пушить если build упал с ошибками
-- `docs\_git_result.txt` и `docs\_deploy.ps1` — служебные, в `.gitignore`
-
-### Формат коммитов
-```
-feat: новая функция
-fix: исправление бага
-refactor: рефакторинг без изменения поведения
-docs: обновление документации
-chore: конфигурация, зависимости, уборка
+src/
+├── app/
+│   ├── (dashboard)/        # Основные страницы (clients, visits, sales, payments...)
+│   ├── (worker)/           # Изолированный раздел для сотрудников
+│   ├── admin/              # Суперадмин панель
+│   ├── api/                # API Routes
+│   ├── landing/            # Публичный лендинг
+│   ├── login/              # Аутентификация
+│   └── demo/               # Демо-режим
+├── components/
+│   ├── ui/                 # Базовые компоненты (Modal, TrinityModalShell, WizardModal...)
+│   ├── sales/              # Компоненты продаж (UnifiedSalesDialog и др.)
+│   ├── visits/             # Компоненты визитов
+│   ├── payments/           # Компоненты платежей
+│   ├── shared/             # Переиспользуемые (ItemPickerSheet и др.)
+│   └── layout/             # Sidebar, GoldTabBar, Header...
+├── hooks/                  # Custom hooks (useClients, useServices, useSales...)
+├── lib/                    # Утилиты (auth-helpers, tranzila, supabase...)
+├── contexts/               # React Contexts (LanguageContext, BranchContext...)
+└── types/                  # TypeScript типы (database.ts и др.)
 ```
 
 ---
 
-## 🔐 Auth — как работает
+## ⚙️ Правила работы AI (обязательно)
+
+### 1. СНАЧАЛА ЧИТАЙ, ПОТОМ ПИШИ
+
+Перед написанием любого кода:
+
+1. Найди и прочитай **все файлы**, связанные с задачей
+2. Проверь существующие хуки, типы, компоненты — не дублируй
+3. Читай реальный код, не угадывай структуру по названию
+
+```
+❌ Неправильно: "Думаю, там используется useState для..."
+✅ Правильно: прочитать файл → увидеть реальную реализацию
+```
+
+### 2. CROSS-CHECK ПЕРЕД ИЗМЕНЕНИЕМ
+
+Перед правкой любого файла проверь:
+
+- Какие компоненты **импортируют** этот файл?
+- Какие таблицы/поля БД он **читает/пишет**?
+- Есть ли **типы** в `src/types/` которые нужно обновить?
+- Есть ли **тесты** или **смежные файлы** с той же логикой?
+
+Инструменты: `start_search` по имени файла/функции/таблицы.
+
+### 3. ИНЖЕНЕРНЫЙ ПРОТОКОЛ
+
+**Фаза 1 — Скан:** Читаем реальные файлы. Никаких предположений.
+
+**Фаза 2 — Проект:** Планируем изменения с учётом:
+- Валидация входящих данных
+- Обработка ошибок (типизированные error-классы)
+- Оценка регрессии
+
+**Фаза 3 — Валидация:**
+- TypeScript не ломается
+- UI не теряет элементы
+- API маршруты защищены auth
+
+**Фаза 4 — Отчёт:**
+```
+✅ Проверено: [список файлов]
+🔁 Регрессия: нет / описание
+🔒 Безопасность: защищено
+```
+
+### 4. ЗАПРЕЩЕНО
+
+```
+❌ Monkey-patching
+❌ Temp-скрипты (_fix.js, _patch.js) — только через стандартные механизмы
+❌ Удалять UI-элементы без явной просьбы
+❌ Хардкодить org_id, user_id или другие тенантные данные
+❌ Угадывать структуру БД — читать types/database.ts
+```
+
+---
+
+## 🔐 Безопасность (обязательные паттерны)
+
+### Каждый API Route обязан:
 
 ```typescript
-// ВСЕГДА так:
-const { user, orgId, activeOrgId, role } = await getAuthContext(request)
+// 1. Auth первым делом
+const auth = await getAuthContext(req)
+if ('error' in auth) return auth.error
 
-// activeOrgId читается из таблицы user_active_branch — НИКОГДА из headers
-// Файл: src/lib/auth-helpers.ts
+// 2. Данные только через activeOrgId из БД (не из заголовков!)
+const { orgId, activeOrgId } = auth
+
+// 3. Все запросы фильтровать по org_id
+.eq('org_id', orgId)
+
+// 4. Service role только ПОСЛЕ проверки auth
+const service = createSupabaseServiceClient()
+```
+
+### RLS правило:
+
+```sql
+-- ✅ Правильно (один вызов на запрос)
+WHERE user_id = (SELECT auth.uid())
+
+-- ❌ Неправильно (вызов на каждую строку)
+WHERE user_id = auth.uid()
 ```
 
 ---
 
-## 🏗 Стандарты кода
+## 🎨 UI-правила
 
 ### Модалки
-Все модалки используют `TrinityModalShell`. Без исключений.
 
-### RTL/LTR
-Использовать `useLanguage()`. Никогда не хардкодить `'he'` или `'rtl'`.
+| Тип | Компонент |
+|-----|-----------|
+| Стандартная форма | `TrinityModalShell` + `Modal` |
+| Многошаговая | `WizardModal` |
+| Мобильный паттерн | `ModalBottomSheet` |
 
-### Responsive
-Все страницы: mobile `<768px` / tablet `768–1024px` / desktop `>1024px`
+**Никогда не создавать кастомный modal "с нуля"** — использовать существующие.
 
-### UI правило
-НИКОГДА не удалять кнопки, поля или функционал без явного указания Влада.
+### Адаптивность (ОБЯЗАТЕЛЬНО для всех страниц)
 
----
+```
+Mobile  < 768px
+Tablet  768–1024px
+Desktop > 1024px
+```
 
-## 🗄 База данных — ключевые правила
+**Правило**: добавление нового раздела/страницы требует поддержки всех трёх брейкпоинтов.
 
-- Каждый запрос фильтруется по `org_id`
-- RLS включён на всех таблицах
-- Service role используется только после проверки auth
-- `activeOrgId` всегда из БД, не из клиента
+### Методы оплаты
 
-### Supabase
-- Project ID: `tjryzcqvsavtllahjyrj`
-- Файлы клиентов: `src/lib/supabase/server.ts`, `src/lib/supabase-service.ts`
+`enabled_payment_methods` из org-настроек должен применяться **везде**: в визитах, продажах, платежах.
+`credit_card` = карта, всегда присутствует по умолчанию.
 
----
+После любой работы с платёжными методами — обязательно проверить консистентность по всей системе.
 
-## 📋 Перед каждым изменением — чеклист
+### Навигация (модули)
 
-- [ ] Прочитал файл который меняю
-- [ ] Нашёл все смежные файлы (та же таблица / хук / компонент)
-- [ ] Проверил что не дублирую существующий функционал
-- [ ] Build чистый перед коммитом
-- [ ] Документация обновлена
+После работы с модулями или навигацией — проверить синхронизацию включён/выключен → UI.
 
 ---
 
-## 🚫 Запрещено
+## 🚀 Деплой (строгий порядок)
 
-- Угадывать синтаксис команд — читай конфиг и файлы
-- Пробовать разные варианты одной команды подряд
-- Пушить с ошибками билда
-- Удалять UI элементы без явной просьбы
-- Monkey-patching и временные костыли
-- Хардкодить org_id, язык, роли
+```bash
+# 1. Чистый билд — ОБЯЗАТЕЛЬНО
+npm run build   # должен быть 0 ошибок, 0 TypeScript warnings
+
+# 2. Commit через файл (Windows CMD)
+# Писать message в файл → коммитить через -F → удалять файл:
+# write_file → docs\commit-msg.txt
+# cd /d F:\Amber_solutions_Kira\Trinity
+# git add <файлы>
+# git commit -F docs\commit-msg.txt
+# git push origin main
+# del docs\commit-msg.txt
+
+# git push origin main = PRODUCTION (Vercel auto-deploy)
+```
+
+**Никогда не пушить без чистого билда.**
+
+### Commit-сообщения (формат)
+
+```
+feat: новая функциональность
+fix: исправление бага
+refactor: рефакторинг без изменения поведения
+chore: конфигурация, зависимости
+docs: документация
+```
 
 ---
 
-## 📞 Клиенты (production)
+## 🐛 Правило отладки
 
-| Клиент | Org ID | Бизнес |
-|--------|--------|--------|
-| Анета (Beautymania) | `1e77c781-3848-4b16-a623-693de123c6bc` | Салон красоты |
-| Ксения (Hair Rehab) | `b1a38ae1-2ce8-496a-b1cf-93ed0498d44e` | Салон |
+При визуальной или функциональной ошибке:
 
-**Tranzila terminal Ксении:** `hrehab`
+1. **Читать реальные логи** (Vercel dashboard, browser console)
+2. **Искать реальный код** — не угадывать
+3. **Debug-сборка** если нужно — никогда не гадать
+
+```
+❌ "Наверное, проблема в том что..."
+✅ Прочитать файл → найти реальную причину → зафиксировать
+```
 
 ---
 
-## 🔧 Окружение
+## 📋 Checklist перед каждым PR/деплоем
 
-- Shell: `powershell.exe`
-- Node: v24.15.0
-- OS: Windows (пути с `\`, не `/`)
-- Flutter SDK: `F:\Amber_solutions_Kira\flutter_sdk\flutter`
-- Device (тест): Samsung S21, ID `RFCX71YPJ0X`
+- [ ] `npm run build` — чистый (0 ошибок)
+- [ ] Прочитаны все затронутые файлы
+- [ ] Нет дублирования существующей логики
+- [ ] API routes защищены через `getAuthContext()`
+- [ ] Данные фильтруются по `org_id`
+- [ ] Адаптивность: mobile/tablet/desktop
+- [ ] UI-элементы не удалены без запроса
+- [ ] Методы оплаты консистентны (если затронуты)
+- [ ] Документация обновлена (`docs/TRINITY_DOCS.md`)
+
+---
+
+## 📚 Ключевые файлы для чтения
+
+| Файл | Когда читать |
+|------|-------------|
+| `src/lib/auth-helpers.ts` | Перед любым API route |
+| `src/types/database.ts` | Перед работой с БД |
+| `src/contexts/LanguageContext.tsx` | Перед добавлением строк UI |
+| `src/hooks/use*.ts` | Перед созданием нового хука |
+| `src/components/ui/TrinityModalShell.tsx` | Перед созданием модалки |
+| `docs/TRINITY_DOCS.md` | Полная документация проекта |
+
+---
+
+*Последнее обновление: 07.05.2026*

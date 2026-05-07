@@ -59,6 +59,8 @@ export function PaymentDetailsDrawer({
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [mounted, setMounted]               = useState(false)
   const [isMobile, setIsMobile]             = useState(false)
+  const [deleting, setDeleting]             = useState(false)
+  const [confirmDelete, setConfirmDelete]   = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -179,8 +181,6 @@ export function PaymentDetailsDrawer({
   }
 
   // ── Delete pending/failed payment ───────────────────────────────────────────
-  const [deleting, setDeleting] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const canDeletePayment = payment.status === 'pending' || payment.status === 'failed' || payment.status === 'cancelled'
 
   const handleDeletePayment = async () => {

@@ -125,11 +125,47 @@ export function TrinityModalShell({
         gridTemplateColumns: '176px minmax(0, 1fr)',
         minHeight:           420,
         maxHeight:           '85vh',
-        overflow:            'visible',   // НЕ hidden — иначе дропдауны (ClientSearch) обрезаются
+        overflow:            'visible',
         overflowWrap:        'break-word',
+        position:            'relative',
       }}
       dir={dir}
     >
+      {/* Кнопка × — поверх белой части, правый верхний угол */}
+      <button
+        onClick={onClose}
+        aria-label="Закрыть"
+        style={{
+          position:        'absolute',
+          top:             10,
+          right:           10,
+          zIndex:          200,
+          width:           28,
+          height:          28,
+          borderRadius:    '50%',
+          background:      '#1a1a1a',
+          border:          '1.5px solid rgba(0,0,0,0.1)',
+          color:           '#fff',
+          cursor:          'pointer',
+          display:         'flex',
+          alignItems:      'center',
+          justifyContent:  'center',
+          boxShadow:       '0 2px 6px rgba(0,0,0,0.25)',
+          transition:      'transform 0.15s, background 0.15s',
+        }}
+        onMouseEnter={e => {
+          const b = e.currentTarget as HTMLButtonElement
+          b.style.transform  = 'scale(1.15)'
+          b.style.background = '#333'
+        }}
+        onMouseLeave={e => {
+          const b = e.currentTarget as HTMLButtonElement
+          b.style.transform  = 'scale(1)'
+          b.style.background = '#1a1a1a'
+        }}
+      >
+        <X size={14} strokeWidth={2.5} />
+      </button>
       {/* Sidebar */}
       <div
         style={{
@@ -148,40 +184,6 @@ export function TrinityModalShell({
           flexShrink:     0,
         }}
       >
-        {/* Кнопка × — в сайдбаре, всегда видна */}
-        <button
-          onClick={onClose}
-          aria-label="Закрыть"
-          style={{
-            alignSelf:       dir === 'rtl' ? 'flex-start' : 'flex-end',
-            marginBottom:    12,
-            width:           28,
-            height:          28,
-            borderRadius:    '50%',
-            background:      'rgba(255,255,255,0.15)',
-            border:          '1.5px solid rgba(255,255,255,0.25)',
-            color:           '#fff',
-            cursor:          'pointer',
-            display:         'flex',
-            alignItems:      'center',
-            justifyContent:  'center',
-            flexShrink:      0,
-            transition:      'background 0.15s, transform 0.15s',
-          }}
-          onMouseEnter={e => {
-            const b = e.currentTarget as HTMLButtonElement
-            b.style.background = 'rgba(255,255,255,0.28)'
-            b.style.transform  = 'scale(1.1)'
-          }}
-          onMouseLeave={e => {
-            const b = e.currentTarget as HTMLButtonElement
-            b.style.background = 'rgba(255,255,255,0.15)'
-            b.style.transform  = 'scale(1)'
-          }}
-        >
-          <X size={14} strokeWidth={2.5} />
-        </button>
-
         {/* Icon circle */}
         <div
           style={{

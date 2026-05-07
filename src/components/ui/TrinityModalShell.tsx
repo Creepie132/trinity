@@ -153,7 +153,7 @@ export function TrinityModalShell({
           onClick={onClose}
           aria-label="Закрыть"
           style={{
-            alignSelf:       dir === 'rtl' ? 'flex-end' : 'flex-start',
+            alignSelf:       dir === 'rtl' ? 'flex-start' : 'flex-end',
             marginBottom:    12,
             width:           28,
             height:          28,

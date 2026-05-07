@@ -29,7 +29,7 @@ interface ModalProps {
   /**
    * When true: drag handle becomes a transparent overlay (no white bar),
    * close/pin buttons float over the content as white icons.
-   * Use when children start with a dark/colored header.
+   * Use when children start with a dark/colored header (e.g. TrinityModalShell).
    */
   darkHeader?: boolean
 }
@@ -132,24 +132,31 @@ export function Modal({
   const zIndex   = zIndexOverride ?? (pinnedData ? pinnedData.zIndex : 9000)
   const maxWidth = width ? `clamp(320px, ${width}, calc(100vw - 32px))` : (sizeMap[size] ?? sizeMap.md)
 
-  // Close button offset: sits at the corner, half outside the modal box
-  // RTL → top-left outside; LTR → top-right outside
-  const closeBtnStyle: React.CSSProperties = {
-    position:        'fixed',
-    zIndex:          zIndex + 20,
-    width:           40,
-    height:          40,
-    borderRadius:    '50%',
-    background:      '#3c3c3c',
-    border:          'none',
-    color:           '#fff',
-    cursor:          'pointer',
-    display:         'flex',
-    alignItems:      'center',
-    justifyContent:  'center',
-    boxShadow:       '0 4px 20px rgba(0,0,0,0.5)',
-    transition:      'transform 0.15s, background 0.15s',
-    pointerEvents:   'auto',
+  // ── Close button: absolute inside modal, top corner per dir ──────────────
+  // RTL → top-left corner (inset-inline-start)
+  // LTR → top-right corner (inset-inline-end)
+  // Placed as absolute child so it's always visible regardless of modal position.
+  const closeBtnBase: React.CSSProperties = {
+    position:       'absolute',
+    top:            10,
+    zIndex:         20,
+    width:          34,
+    height:         34,
+    borderRadius:   '50%',
+    background:     'rgba(0,0,0,0.55)',
+    border:         'none',
+    color:          '#fff',
+    cursor:         'pointer',
+    display:        'none', // shown only on desktop via inline override in JSX
+    alignItems:     'center',
+    justifyContent: 'center',
+    boxShadow:      '0 2px 8px rgba(0,0,0,0.35)',
+    transition:     'transform 0.15s, background 0.15s',
+    pointerEvents:  'auto',
+    // dir-aware corner:
+    ...(dir === 'rtl'
+      ? { left: 10, right: 'auto' }
+      : { right: 10, left: 'auto' }),
   }
 
   return createPortal(
@@ -165,7 +172,7 @@ export function Modal({
         />
       )}
 
-      {/* Modal container */}
+      {/* Modal container — overflow: visible so close btn can peek out */}
       <div
         ref={containerRef}
         onMouseDown={() => pinned_ && bringToFront(modalId)}
@@ -173,7 +180,7 @@ export function Modal({
         className={cn(
           'fixed bg-white dark:bg-gray-900 shadow-2xl pointer-events-auto flex flex-col',
           'animate-in fade-in-0 duration-200',
-          'rounded-2xl overflow-hidden',
+          'rounded-2xl',
           'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
           'max-h-[92dvh] md:max-h-[calc(100dvh-32px)]',
           pinned_ && 'ring-2 ring-orange-400/60',
@@ -182,10 +189,12 @@ export function Modal({
         data-desktop="true"
         style={{
           zIndex,
-          width:          '95%',
+          width:        '95%',
           maxWidth,
-          marginInline:   'auto',
-          overflowWrap:   'break-word',
+          marginInline: 'auto',
+          overflowWrap: 'break-word',
+          overflow:     'visible',   // ← was 'hidden'; now close btn is never clipped
+          position:     'fixed',
         }}
         role="dialog"
         aria-modal={!pinned_}
@@ -193,13 +202,19 @@ export function Modal({
         dir={dir}
       >
         {darkHeader ? (
-          /* ── Dark header mode ── */
-          <div className="relative flex-1 flex flex-col min-h-0 overflow-hidden rounded-2xl">
+          /* ── Dark header mode (TrinityModalShell) ── */
+          <div
+            className="relative flex-1 flex flex-col min-h-0 rounded-2xl"
+            style={{ overflow: 'hidden' }}
+          >
+            {/* Drag handle — desktop only */}
             <div
               ref={handleRef}
               className="hidden md:block absolute inset-x-0 top-0 h-8 cursor-grab active:cursor-grabbing select-none z-10"
               style={{ background: 'transparent' }}
             />
+
+            {/* Pin button */}
             <div
               className="absolute top-2.5 z-20 flex items-center gap-0.5"
               style={{ [dir === 'rtl' ? 'left' : 'right']: '10px' }}
@@ -220,6 +235,7 @@ export function Modal({
                 {pinned_ ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
               </button>
             </div>
+
             <div className={cn('flex-1 overflow-y-auto', contentClassName)}>
               {children}
             </div>
@@ -261,7 +277,10 @@ export function Modal({
               </div>
             )}
 
-            <div className={cn('flex-1 overflow-y-auto p-5', footer && 'pb-3', contentClassName)}>
+            <div
+              className={cn('flex-1 overflow-y-auto p-5', footer && 'pb-3', contentClassName)}
+              style={{ overflow: 'hidden auto' }}
+            >
               {children}
             </div>
           </>
@@ -272,104 +291,32 @@ export function Modal({
             {footer}
           </div>
         )}
-      </div>
 
-      {/* ── Floating close button ──────────────────────────────────────────────
-          Renders as a separate portal child (sibling to the modal box).
-          Uses fixed positioning and a PositionSyncer to stay glued to the
-          modal's corner. Works on desktop only (hidden on mobile via CSS).
-          Uses a small ResizeObserver-free approach: reads coords after paint.
-      ──────────────────────────────────────────────────────────────────────── */}
-      {showCloseButton && !pinned_ && (
-        <FloatingCloseButton
-          containerRef={containerRef}
-          onClose={onClose}
-          dir={dir}
-          style={closeBtnStyle}
-        />
-      )}
+        {/* ── Close button — absolute inside modal, always visible ──────────
+            desktop only (hidden on mobile — ModalBottomSheet has its own).
+            RTL → top-left corner; LTR → top-right corner.
+        ─────────────────────────────────────────────────────────────────── */}
+        {showCloseButton && !pinned_ && (
+          <button
+            onClick={onClose}
+            aria-label="Закрыть"
+            className="hidden md:flex"
+            style={closeBtnBase}
+            onMouseEnter={e => {
+              ;(e.currentTarget as HTMLButtonElement).style.transform  = 'scale(1.12)'
+              ;(e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.75)'
+            }}
+            onMouseLeave={e => {
+              ;(e.currentTarget as HTMLButtonElement).style.transform  = 'scale(1)'
+              ;(e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.55)'
+            }}
+          >
+            <X size={18} strokeWidth={2.5} />
+          </button>
+        )}
+      </div>
     </>,
     document.body
-  )
-}
-
-// ── FloatingCloseButton ────────────────────────────────────────────────────
-// Separate component so it can use its own effect cleanly.
-// Positions itself relative to the modal box via getBoundingClientRect,
-// but re-reads on every animation frame while visible — so it always
-// follows the modal even when the user drags it.
-function FloatingCloseButton({
-  containerRef,
-  onClose,
-  dir,
-  style,
-}: {
-  containerRef: React.RefObject<HTMLDivElement | null>
-  onClose: () => void
-  dir: string
-  style: React.CSSProperties
-}) {
-  const btnRef = useRef<HTMLButtonElement>(null)
-  const rafRef = useRef<number>(0)
-
-  useEffect(() => {
-    const btn   = btnRef.current
-    const modal = containerRef.current
-    if (!btn || !modal) return
-
-    const sync = () => {
-      const rect     = modal.getBoundingClientRect()
-      const isMobile = window.innerWidth < 768
-      // Hide on mobile or when modal has no size yet
-      if (rect.width === 0 || isMobile) {
-        btn.style.opacity       = '0'
-        btn.style.pointerEvents = 'none'
-        rafRef.current = requestAnimationFrame(sync)
-        return
-      }
-      const btnSize = 40
-      const half    = btnSize / 2
-
-      btn.style.top    = `${rect.top - half}px`
-      if (dir === 'rtl') {
-        btn.style.left  = `${rect.left - half}px`
-        btn.style.right = 'auto'
-      } else {
-        btn.style.left  = `${rect.right - half}px`
-        btn.style.right = 'auto'
-      }
-      btn.style.opacity       = '1'
-      btn.style.pointerEvents = 'auto'
-      rafRef.current = requestAnimationFrame(sync)
-    }
-
-    rafRef.current = requestAnimationFrame(sync)
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [containerRef, dir])
-
-  return (
-    <button
-      ref={btnRef}
-      onClick={onClose}
-      aria-label="Закрыть"
-      style={{
-        ...style,
-        // Start invisible; sync() will make it visible after first rect read
-        opacity:       0,
-        pointerEvents: 'none',
-        // Hide on mobile via media query workaround — we set display directly
-      }}
-      onMouseEnter={e => {
-        ;(e.currentTarget as HTMLButtonElement).style.transform  = 'scale(1.12)'
-        ;(e.currentTarget as HTMLButtonElement).style.background = '#555'
-      }}
-      onMouseLeave={e => {
-        ;(e.currentTarget as HTMLButtonElement).style.transform  = 'scale(1)'
-        ;(e.currentTarget as HTMLButtonElement).style.background = '#3c3c3c'
-      }}
-    >
-      <X size={20} strokeWidth={2.5} />
-    </button>
   )
 }
 

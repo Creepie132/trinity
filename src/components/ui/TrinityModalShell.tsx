@@ -20,6 +20,7 @@
  */
 
 import { ReactNode, useEffect, useState } from 'react'
+import { X } from 'lucide-react'
 import { ModalBottomSheet } from './ModalBottomSheet'
 import { useMobileBackTrap } from '@/hooks/useMobileBackTrap'
 
@@ -147,6 +148,40 @@ export function TrinityModalShell({
           flexShrink:     0,
         }}
       >
+        {/* Кнопка × — в сайдбаре, всегда видна */}
+        <button
+          onClick={onClose}
+          aria-label="Закрыть"
+          style={{
+            alignSelf:       dir === 'rtl' ? 'flex-end' : 'flex-start',
+            marginBottom:    12,
+            width:           28,
+            height:          28,
+            borderRadius:    '50%',
+            background:      'rgba(255,255,255,0.15)',
+            border:          '1.5px solid rgba(255,255,255,0.25)',
+            color:           '#fff',
+            cursor:          'pointer',
+            display:         'flex',
+            alignItems:      'center',
+            justifyContent:  'center',
+            flexShrink:      0,
+            transition:      'background 0.15s, transform 0.15s',
+          }}
+          onMouseEnter={e => {
+            const b = e.currentTarget as HTMLButtonElement
+            b.style.background = 'rgba(255,255,255,0.28)'
+            b.style.transform  = 'scale(1.1)'
+          }}
+          onMouseLeave={e => {
+            const b = e.currentTarget as HTMLButtonElement
+            b.style.background = 'rgba(255,255,255,0.15)'
+            b.style.transform  = 'scale(1)'
+          }}
+        >
+          <X size={14} strokeWidth={2.5} />
+        </button>
+
         {/* Icon circle */}
         <div
           style={{

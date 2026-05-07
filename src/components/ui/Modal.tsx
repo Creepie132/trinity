@@ -143,17 +143,18 @@ export function Modal({
       const modal = containerRef.current
       const btn   = closeButtonRef.current
       if (!modal || !btn) return
-      const rect   = modal.getBoundingClientRect()
+      const rect    = modal.getBoundingClientRect()
       const btnSize = 48
+      const gap     = 12  // gap between button and modal edge
 
       if (dir === 'rtl') {
-        // RTL: левая сторона модалки, немного снаружи, у верхнего края
-        btn.style.left = `${rect.left - btnSize - 16}px`
+        // RTL: top-left, outside modal
+        btn.style.left = `${rect.left - btnSize - gap}px`
       } else {
-        // LTR: правая сторона
-        btn.style.left = `${rect.right + 16}px`
+        // LTR: top-right, outside modal
+        btn.style.left = `${rect.right + gap}px`
       }
-      btn.style.top    = `${rect.top + 20}px`
+      btn.style.top     = `${rect.top - btnSize / 2}px`
       btn.style.opacity = '1'
     }
     // double-rAF: wait for CSS transform to settle before reading coordinates
@@ -295,11 +296,7 @@ export function Modal({
                   >
                     {pinned_ ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
                   </button>
-                  {showCloseButton && (
-                    <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Close">
-                      <X className="w-5 h-5 text-gray-400" />
-                    </button>
-                  )}
+                  {/* close button moved to floating button outside modal */}
                 </div>
               </div>
             )}
@@ -319,14 +316,15 @@ export function Modal({
         )}
       </div>
 
-      {/* Floating close button — outside the modal corner, "levitating" */}
-      {showCloseButton && !pinned_ && (
+      {/* Floating close button — levitates outside the modal corner */}
+      {showCloseButton && !pinned_ && isDesktop && (
         <button
           ref={closeButtonRef}
           onClick={onClose}
           aria-label="Close"
-          className="fixed z-[9999] hidden md:flex items-center justify-center transition-transform duration-150 hover:scale-110 active:scale-95"
           style={{
+            position:     'fixed',
+            zIndex:       (zIndexOverride ?? 9000) + 10,
             width:        48,
             height:       48,
             borderRadius: '50%',
@@ -334,9 +332,16 @@ export function Modal({
             border:       'none',
             color:        '#ffffff',
             cursor:       'pointer',
+            display:      'flex',
+            alignItems:   'center',
+            justifyContent: 'center',
             boxShadow:    '0 4px 24px rgba(0,0,0,0.5)',
-            opacity:      0,   // hidden until JS positions it
+            opacity:      0,
+            transition:   'transform 0.15s, opacity 0.1s',
+            pointerEvents: 'auto',
           }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.1)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)' }}
         >
           <X size={22} strokeWidth={2.5} />
         </button>

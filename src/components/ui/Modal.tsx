@@ -89,30 +89,34 @@ export function Modal({
   if (!mounted) return null
 
   const zIndex   = zIndexOverride ?? 9000
-  const maxWidth = width ? `clamp(320px, ${width}, calc(100vw - 32px))` : (sizeMap[size] ?? sizeMap.md)
+  const maxWidth = width
+    ? `clamp(320px, ${width}, calc(100vw - 32px))`
+    : (sizeMap[size] ?? sizeMap.md)
 
-  // ── Close button style ────────────────────────────────────────────────────
-  // position: absolute inside modal container.
-  // Тёмный фон (#3d4a5c) — хорошо виден и над тёмным sidebar, и над светлым content.
-  // RTL → top-left; LTR → top-right.
+  // ── Close button ──────────────────────────────────────────────────────────
+  // position: absolute на контейнере (overflow: visible).
+  // Чёрный фон, белый крестик. RTL → top-left, LTR → top-right.
+  // Вынесен ПОСЛЕ всего контента — является прямым дочерним элементом
+  // контейнера, поэтому не обрезается внутренним overflow:hidden.
   const closeBtnStyle: React.CSSProperties = {
     position:        'absolute',
-    top:             10,
-    zIndex:          30,
-    width:           32,
-    height:          32,
+    top:             -14,
+    zIndex:          50,
+    width:           30,
+    height:          30,
     borderRadius:    '50%',
-    background:      '#3d4a5c',
-    border:          '2px solid rgba(255,255,255,0.18)',
+    background:      '#111',
+    border:          '2px solid rgba(255,255,255,0.25)',
     color:           '#fff',
     cursor:          'pointer',
     display:         'flex',
     alignItems:      'center',
     justifyContent:  'center',
-    boxShadow:       '0 2px 10px rgba(0,0,0,0.4)',
+    boxShadow:       '0 2px 8px rgba(0,0,0,0.5)',
     transition:      'transform 0.15s, background 0.15s',
     pointerEvents:   'auto',
-    ...(dir === 'rtl' ? { left: 10, right: 'auto' } : { right: 10, left: 'auto' }),
+    flexShrink:      0,
+    ...(dir === 'rtl' ? { left: 12, right: 'auto' } : { right: 12, left: 'auto' }),
   }
 
   return createPortal(
@@ -126,7 +130,7 @@ export function Modal({
         aria-hidden="true"
       />
 
-      {/* Modal container */}
+      {/* Modal container — overflow:visible чтобы кнопка × торчала наружу */}
       <div
         ref={containerRef}
         data-trinity-modal-wrapper=""
@@ -138,7 +142,6 @@ export function Modal({
           'max-h-[92dvh] md:max-h-[calc(100dvh-32px)]',
           className
         )}
-        data-desktop="true"
         style={{
           zIndex,
           width:        '95%',
@@ -159,13 +162,12 @@ export function Modal({
             className="relative flex-1 flex flex-col min-h-0 rounded-2xl"
             style={{ overflow: 'hidden' }}
           >
-            {/* Drag handle — desktop only */}
+            {/* Drag handle */}
             <div
               ref={handleRef}
               className="hidden md:block absolute inset-x-0 top-0 h-8 cursor-grab active:cursor-grabbing select-none z-10"
               style={{ background: 'transparent' }}
             />
-            {/* headerActions (если есть) */}
             {headerActions && (
               <div
                 className="absolute top-2.5 z-20 flex items-center gap-0.5"
@@ -190,10 +192,15 @@ export function Modal({
             {title && (
               <div className="flex items-start justify-between px-5 pb-0 pt-1">
                 <div className="flex-1 min-w-0 pt-1">
-                  <h2 id="modal-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100 leading-tight">
+                  <h2
+                    id="modal-title"
+                    className="text-lg font-semibold text-gray-900 dark:text-gray-100 leading-tight"
+                  >
                     {title}
                   </h2>
-                  {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>}
+                  {subtitle && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
+                  )}
                 </div>
                 {headerActions && (
                   <div className="flex items-center gap-1 -mt-1 -me-1">{headerActions}</div>
@@ -215,9 +222,11 @@ export function Modal({
           </div>
         )}
 
-        {/* ── Close button — desktop only, always visible ───────────────────
-            RTL → top-left; LTR → top-right.
-            Тёмный фон виден и над тёмным sidebar, и над светлым content.
+        {/* ── Кнопка × — прямой child контейнера, position:absolute ──────────
+            Контейнер overflow:visible — кнопка не обрезается.
+            top:-14 — наполовину торчит над модалкой.
+            RTL → left:12; LTR → right:12.
+            hidden md:flex — скрыта на мобиле.
         ──────────────────────────────────────────────────────────────────── */}
         {showCloseButton && (
           <button
@@ -227,16 +236,16 @@ export function Modal({
             style={closeBtnStyle}
             onMouseEnter={e => {
               const b = e.currentTarget as HTMLButtonElement
-              b.style.transform  = 'scale(1.12)'
-              b.style.background = '#2c3a4a'
+              b.style.transform  = 'scale(1.15)'
+              b.style.background = '#333'
             }}
             onMouseLeave={e => {
               const b = e.currentTarget as HTMLButtonElement
               b.style.transform  = 'scale(1)'
-              b.style.background = '#3d4a5c'
+              b.style.background = '#111'
             }}
           >
-            <X size={16} strokeWidth={2.5} />
+            <X size={15} strokeWidth={2.5} />
           </button>
         )}
       </div>

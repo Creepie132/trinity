@@ -75,6 +75,18 @@ export async function PUT(
       return NextResponse.json({ error: 'tranzila_terminal is required' }, { status: 400 })
     }
 
+    // Читаем текущие enabled_payment_methods чтобы добавить 'card', не затирая остальные
+    const { data: org, error: fetchErr } = await supabaseAdmin
+      .from('organizations')
+      .select('enabled_payment_methods')
+      .eq('id', orgId)
+      .single()
+
+    if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 })
+
+    const current: string[] = org?.enabled_payment_methods ?? ['cash', 'card']
+    const withCard = current.includes('card') ? current : [...current, 'card']
+
     const { error } = await supabaseAdmin
       .from('organizations')
       .update({
@@ -83,6 +95,7 @@ export async function PUT(
         tranzila_token_terminal:   tranzila_token_terminal?.trim() || null,
         tranzila_token_password:   tranzila_token_password?.trim() || null,
         tranzila_invoice_terminal: tranzila_invoice_terminal?.trim() || null,
+        enabled_payment_methods:   withCard,
       })
       .eq('id', orgId)
 
@@ -105,6 +118,18 @@ export async function DELETE(
 
     const { orgId } = await context.params
 
+    // Читаем текущие методы чтобы убрать 'card', не затирая остальные
+    const { data: org, error: fetchErr } = await supabaseAdmin
+      .from('organizations')
+      .select('enabled_payment_methods')
+      .eq('id', orgId)
+      .single()
+
+    if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 })
+
+    const without = (org?.enabled_payment_methods ?? []).filter((m: string) => m !== 'card')
+    const safeWithout = without.length > 0 ? without : ['cash']
+
     const { error } = await supabaseAdmin
       .from('organizations')
       .update({
@@ -113,6 +138,7 @@ export async function DELETE(
         tranzila_token_terminal:   null,
         tranzila_token_password:   null,
         tranzila_invoice_terminal: null,
+        enabled_payment_methods:   safeWithout,
       })
       .eq('id', orgId)
 

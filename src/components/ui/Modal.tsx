@@ -1,10 +1,9 @@
 'use client'
 
-import { useEffect, useCallback, ReactNode, useRef, useState } from 'react'
+import { useEffect, useCallback, ReactNode, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, GripHorizontal } from 'lucide-react'
+import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useDraggableDialog } from '@/hooks/useDraggableDialog'
 
 interface ModalProps {
   open: boolean
@@ -23,13 +22,10 @@ interface ModalProps {
   contentClassName?: string
   dir?: 'rtl' | 'ltr'
   modalId?: string
-  /** @deprecated — pin-функционал удалён, проп игнорируется */
+  /** @deprecated игнорируется */
   pinTitle?: string
   zIndexOverride?: number
-  /**
-   * When true: drag handle becomes a transparent overlay (no white bar).
-   * Use when children start with a dark/colored header (e.g. TrinityModalShell).
-   */
+  /** When true: use with TrinityModalShell (dark sidebar header). */
   darkHeader?: boolean
 }
 
@@ -63,8 +59,6 @@ export function Modal({
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
 
-  const { containerRef, handleRef, resetPosition } = useDraggableDialog()
-
   const handleEscape = useCallback(
     (e: KeyboardEvent) => { if (e.key === 'Escape' && closeOnEscape) onClose() },
     [closeOnEscape, onClose]
@@ -81,41 +75,35 @@ export function Modal({
     }
   }, [open, handleEscape])
 
-  useEffect(() => {
-    if (!open) resetPosition()
-  }, [open])
-
-  if (!open) return null
-  if (!mounted) return null
+  if (!open || !mounted) return null
 
   const zIndex   = zIndexOverride ?? 9000
   const maxWidth = width
     ? `clamp(320px, ${width}, calc(100vw - 32px))`
     : (sizeMap[size] ?? sizeMap.md)
 
-  // ── Close button ──────────────────────────────────────────────────────────
-  // position: absolute на контейнере (overflow: visible).
-  // Чёрный фон, белый крестик. RTL → top-left, LTR → top-right.
-  // Вынесен ПОСЛЕ всего контента — является прямым дочерним элементом
-  // контейнера, поэтому не обрезается внутренним overflow:hidden.
+  // ── Кнопка × ─────────────────────────────────────────────────────────────
+  // position:absolute на контейнере (overflow:visible) — не обрезается.
+  // top:-14 — торчит над верхним краем модалки.
+  // RTL → left:12; LTR → right:12.
   const closeBtnStyle: React.CSSProperties = {
-    position:        'absolute',
-    top:             -14,
-    zIndex:          50,
-    width:           30,
-    height:          30,
-    borderRadius:    '50%',
-    background:      '#111',
-    border:          '2px solid rgba(255,255,255,0.25)',
-    color:           '#fff',
-    cursor:          'pointer',
-    display:         'flex',
-    alignItems:      'center',
-    justifyContent:  'center',
-    boxShadow:       '0 2px 8px rgba(0,0,0,0.5)',
-    transition:      'transform 0.15s, background 0.15s',
-    pointerEvents:   'auto',
-    flexShrink:      0,
+    position:       'absolute',
+    top:            -14,
+    zIndex:         50,
+    width:          30,
+    height:         30,
+    borderRadius:   '50%',
+    background:     '#111',
+    border:         '2px solid rgba(255,255,255,0.25)',
+    color:          '#fff',
+    cursor:         'pointer',
+    display:        'flex',
+    alignItems:     'center',
+    justifyContent: 'center',
+    boxShadow:      '0 2px 8px rgba(0,0,0,0.5)',
+    transition:     'transform 0.15s, background 0.15s',
+    pointerEvents:  'auto',
+    flexShrink:     0,
     ...(dir === 'rtl' ? { left: 12, right: 'auto' } : { right: 12, left: 'auto' }),
   }
 
@@ -132,7 +120,6 @@ export function Modal({
 
       {/* Modal container — overflow:visible чтобы кнопка × торчала наружу */}
       <div
-        ref={containerRef}
         data-trinity-modal-wrapper=""
         className={cn(
           'fixed bg-white dark:bg-gray-900 shadow-2xl pointer-events-auto flex flex-col',
@@ -144,90 +131,19 @@ export function Modal({
         )}
         style={{
           zIndex,
+          position:     'fixed',
           width:        '95%',
           maxWidth,
           marginInline: 'auto',
           overflowWrap: 'break-word',
           overflow:     'visible',
-          position:     'fixed',
         }}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
         dir={dir}
       >
-        {darkHeader ? (
-          /* ── Dark header mode (TrinityModalShell) ── */
-          <div
-            className="relative flex-1 flex flex-col min-h-0 rounded-2xl"
-            style={{ overflow: 'hidden' }}
-          >
-            {/* Drag handle */}
-            <div
-              ref={handleRef}
-              className="hidden md:block absolute inset-x-0 top-0 h-8 cursor-grab active:cursor-grabbing select-none z-10"
-              style={{ background: 'transparent' }}
-            />
-            {headerActions && (
-              <div
-                className="absolute top-2.5 z-20 flex items-center gap-0.5"
-                style={{ [dir === 'rtl' ? 'left' : 'right']: '10px' }}
-              >
-                {headerActions}
-              </div>
-            )}
-            <div className={cn('flex-1 overflow-y-auto', contentClassName)}>
-              {children}
-            </div>
-          </div>
-        ) : (
-          /* ── Normal (light) mode ── */
-          <>
-            <div
-              ref={handleRef}
-              className="hidden md:flex items-center justify-center h-5 rounded-t-2xl cursor-grab active:cursor-grabbing select-none group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-            >
-              <GripHorizontal className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 transition-colors" />
-            </div>
-            {title && (
-              <div className="flex items-start justify-between px-5 pb-0 pt-1">
-                <div className="flex-1 min-w-0 pt-1">
-                  <h2
-                    id="modal-title"
-                    className="text-lg font-semibold text-gray-900 dark:text-gray-100 leading-tight"
-                  >
-                    {title}
-                  </h2>
-                  {subtitle && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
-                  )}
-                </div>
-                {headerActions && (
-                  <div className="flex items-center gap-1 -mt-1 -me-1">{headerActions}</div>
-                )}
-              </div>
-            )}
-            <div
-              className={cn('flex-1 overflow-y-auto p-5', footer && 'pb-3', contentClassName)}
-              style={{ overflow: 'hidden auto' }}
-            >
-              {children}
-            </div>
-          </>
-        )}
-
-        {footer && (
-          <div className="flex-shrink-0 p-5 pt-3 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-b-2xl">
-            {footer}
-          </div>
-        )}
-
-        {/* ── Кнопка × — прямой child контейнера, position:absolute ──────────
-            Контейнер overflow:visible — кнопка не обрезается.
-            top:-14 — наполовину торчит над модалкой.
-            RTL → left:12; LTR → right:12.
-            hidden md:flex — скрыта на мобиле.
-        ──────────────────────────────────────────────────────────────────── */}
+        {/* ── Кнопка × — прямой child контейнера, не внутри overflow:hidden ── */}
         {showCloseButton && (
           <button
             onClick={onClose}
@@ -247,6 +163,60 @@ export function Modal({
           >
             <X size={15} strokeWidth={2.5} />
           </button>
+        )}
+
+        {darkHeader ? (
+          /* ── Dark header mode (TrinityModalShell) ── */
+          <div
+            className="relative flex-1 flex flex-col min-h-0 rounded-2xl"
+            style={{ overflow: 'hidden' }}
+          >
+            {headerActions && (
+              <div
+                className="absolute top-2.5 z-20 flex items-center gap-0.5"
+                style={{ [dir === 'rtl' ? 'left' : 'right']: '10px' }}
+              >
+                {headerActions}
+              </div>
+            )}
+            <div className={cn('flex-1 overflow-y-auto', contentClassName)}>
+              {children}
+            </div>
+          </div>
+        ) : (
+          /* ── Normal (light) mode ── */
+          <>
+            {title && (
+              <div className="flex items-start justify-between px-5 pb-0 pt-4">
+                <div className="flex-1 min-w-0">
+                  <h2
+                    id="modal-title"
+                    className="text-lg font-semibold text-gray-900 dark:text-gray-100 leading-tight"
+                  >
+                    {title}
+                  </h2>
+                  {subtitle && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
+                  )}
+                </div>
+                {headerActions && (
+                  <div className="flex items-center gap-1 -mt-1 -me-1">{headerActions}</div>
+                )}
+              </div>
+            )}
+            <div
+              className={cn('flex-1 p-5', footer && 'pb-3', contentClassName)}
+              style={{ overflowY: 'auto' }}
+            >
+              {children}
+            </div>
+          </>
+        )}
+
+        {footer && (
+          <div className="flex-shrink-0 p-5 pt-3 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-b-2xl">
+            {footer}
+          </div>
         )}
       </div>
     </>,

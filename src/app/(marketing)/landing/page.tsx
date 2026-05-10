@@ -1546,7 +1546,7 @@ body {
             <p className="hero-subtitle reveal reveal-delay-2">{t('hero.subtitle')}</p>
 
             <div className="hero-buttons reveal reveal-delay-3">
-              <a href="/demo/register" className="btn-gold">{t('hero.cta')}</a>
+              <a href="https://trinity-sage.vercel.app/demo/register" className="btn-gold">{t('hero.cta')}</a>
               <a href="#features" className="btn-ghost">{t('hero.cta2')}</a>
             </div>
             <div className="hero-stats reveal reveal-delay-4">

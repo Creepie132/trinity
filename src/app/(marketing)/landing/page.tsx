@@ -113,6 +113,16 @@ body {
   margin: 0 !important;
   padding: 0 !important;
 }
+/* КРИТИЧНО: JS чанки могут не грузиться (кэш CDN).
+   Показываем .reveal элементы сразу через CSS — анимация через animation, не JS-класс */
+.reveal {
+  opacity: 1 !important;
+  transform: none !important;
+}
+.reveal.visible {
+  opacity: 1 !important;
+  transform: none !important;
+}
 /* Принудительно белый цвет всем заголовкам и текстовым элементам — защита от Trinity light-theme */
 main h1, main h2, main h3, main h4, main h5, main h6,
 main p, main div, main span, main li, main blockquote, main a {

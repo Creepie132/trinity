@@ -1441,7 +1441,7 @@ body {
       {/* ===== SIDEBAR ===== */}
       <aside className="sidebar">
         <div className="sidebar-logo">
-          <img src="/trinity-logo-80.webp" alt="Trinity CRM" />
+          <img src="https://trinity-sage.vercel.app/trinity-logo-new.png" alt="Trinity CRM" />
           <span>Trinity</span>
         </div>
         <nav className="sidebar-nav">

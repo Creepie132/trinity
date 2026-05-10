@@ -1,0 +1,6 @@
+fix: OAuth redirectTo uses NEXT_PUBLIC_SITE_URL instead of window.location.origin
+
+When Trinity is served via rewrite (ambersol.co.il/trinity → trinity-sage.vercel.app),
+window.location.origin returns ambersol.co.il, causing Supabase to redirect
+the OAuth code to the wrong origin. Now using NEXT_PUBLIC_SITE_URL env var
+(https://trinity-sage.vercel.app) so /callback route is reached correctly.

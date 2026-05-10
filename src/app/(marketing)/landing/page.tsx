@@ -1,8 +1,10 @@
 ﻿'use client'
 
 import { useEffect } from 'react'
+import { useLandingLang } from '@/contexts/LandingLangContext'
 
 export default function LandingPage() {
+  const { lang, setLang, t, dir, isRTL } = useLandingLang()
   useEffect(() => {
     // DOM-патч не нужен: (marketing)/layout.tsx уже объявляет
     // <html lang="ru" dir="ltr"> — hydration совпадает с сервером.
@@ -73,7 +75,7 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <>
+    <div dir={dir} className={isRTL ? 'landing-rtl' : ''}>
       <style>{`
 /* Нет переопределений Trinity — layout уже изолирован через route group (marketing) */
 body {
@@ -263,23 +265,73 @@ body {
   white-space: nowrap;
 }
 
-.sidebar-bottom .lang-toggle {
-  color: var(--muted);
-  font-size: 12px;
-  cursor: pointer;
+.sidebar-bottom .lang-switcher {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.sidebar-bottom a span,
-.sidebar-bottom .lang-toggle span {
+  gap: 6px;
   opacity: 0;
   transition: opacity .25s;
 }
+.sidebar:hover .sidebar-bottom .lang-switcher { opacity: 1; }
 
-.sidebar:hover .sidebar-bottom a span,
-.sidebar:hover .sidebar-bottom .lang-toggle span { opacity: 1; }
+.lang-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.12);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.05em;
+}
+.lang-btn:hover { color: var(--white); border-color: rgba(255,255,255,.3); }
+.lang-btn.active { color: var(--gold); border-color: var(--gold); background: rgba(200,136,26,.08); }
+
+.sidebar-bottom a span {
+  opacity: 0;
+  transition: opacity .25s;
+}
+.sidebar:hover .sidebar-bottom a span { opacity: 1; }
+
+/* RTL support */
+.landing-rtl {
+  direction: rtl;
+}
+.landing-rtl .sidebar {
+  left: auto;
+  right: 0;
+  border-right: none;
+  border-left: 1px solid rgba(255,255,255,.06);
+}
+.landing-rtl .main-scroll {
+  margin-left: 0;
+  margin-right: var(--sidebar-w);
+}
+.landing-rtl .sidebar-nav a.active::before {
+  left: auto;
+  right: 0;
+  border-radius: 3px 0 0 3px;
+}
+.landing-rtl .steps-container::before {
+  background: linear-gradient(270deg, var(--gold), rgba(200,136,26,.2));
+}
+.landing-rtl .mobile-tabs {
+  direction: rtl;
+}
+@media (max-width: 1024px) {
+  .landing-rtl .main-scroll {
+    margin-left: 0;
+    margin-right: 60px;
+  }
+}
+@media (max-width: 768px) {
+  .landing-rtl .main-scroll {
+    margin-right: 0;
+  }
+}
 
 /* ===== MAIN SCROLL CONTAINER ===== */
 .main-scroll {
@@ -1359,43 +1411,44 @@ body {
         <nav className="sidebar-nav">
           <a href="#home" className="active" data-section="home">
             <svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
-            <span>Главная</span>
+            <span>{t('nav.home')}</span>
           </a>
           <a href="#features" data-section="features">
             <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-            <span>Возможности</span>
+            <span>{t('nav.features')}</span>
           </a>
           <a href="#pricing" data-section="pricing">
             <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-            <span>Тарифы</span>
+            <span>{t('nav.pricing')}</span>
           </a>
-
           <a href="#how" data-section="how">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <span>Как это работает</span>
+            <span>{t('nav.how')}</span>
           </a>
           <a href="#security" data-section="security">
             <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            <span>Безопасность</span>
+            <span>{t('nav.security')}</span>
           </a>
           <a href="#reviews" data-section="reviews">
             <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-            <span>Отзывы</span>
+            <span>{t('nav.reviews')}</span>
           </a>
           <a href="#contacts" data-section="contacts">
             <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-            <span>Контакты</span>
+            <span>{t('nav.contacts')}</span>
           </a>
         </nav>
 
         <div className="sidebar-bottom">
           <a href="/login">
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="1.5"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-            <span>Войти →</span>
+            <span>{t('nav.login')}</span>
           </a>
-          <div className="lang-toggle">
-            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z"/></svg>
-            <span>עב</span>
+          <div className="lang-switcher">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--muted)" fill="none" strokeWidth="1.5" style={{flexShrink:0}}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z"/></svg>
+            <button className={`lang-btn${lang==='ru'?' active':''}`} onClick={()=>setLang('ru')}>RU</button>
+            <button className={`lang-btn${lang==='en'?' active':''}`} onClick={()=>setLang('en')}>EN</button>
+            <button className={`lang-btn${lang==='he'?' active':''}`} onClick={()=>setLang('he')}>עב</button>
           </div>
         </div>
       </aside>
@@ -1405,24 +1458,33 @@ body {
         <div className="mobile-tabs-inner">
           <a href="#home" className="active" data-section="home">
             <svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
-            Главная
+            {t('nav.home')}
           </a>
           <a href="#features" data-section="features">
             <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-            Возможности
+            {t('nav.features')}
           </a>
           <a href="#pricing" data-section="pricing">
             <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-            Тарифы
+            {t('nav.pricing')}
           </a>
           <a href="#reviews" data-section="reviews">
             <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-            Отзывы
+            {t('nav.reviews')}
           </a>
           <a href="#contacts" data-section="contacts">
             <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-            Контакты
+            {t('nav.contacts')}
           </a>
+          {/* Mobile lang switcher */}
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2,padding:'4px 6px'}}>
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="var(--muted)" fill="none" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z"/></svg>
+            <div style={{display:'flex',gap:3}}>
+              <button className={`lang-btn${lang==='ru'?' active':''}`} style={{padding:'2px 5px',fontSize:9}} onClick={()=>setLang('ru')}>RU</button>
+              <button className={`lang-btn${lang==='en'?' active':''}`} style={{padding:'2px 5px',fontSize:9}} onClick={()=>setLang('en')}>EN</button>
+              <button className={`lang-btn${lang==='he'?' active':''}`} style={{padding:'2px 5px',fontSize:9}} onClick={()=>setLang('he')}>עב</button>
+            </div>
+          </div>
         </div>
       </nav>
 
@@ -1443,26 +1505,26 @@ body {
             <div className="particle" />
           </div>
           <div className="hero-content">
-            <div className="hero-eyebrow reveal">СИСТЕМА УПРАВЛЕНИЯ БИЗНЕСОМ · ИЗРАИЛЬ</div>
-            <h1 className="reveal reveal-delay-1">Клиенты не пропадают. Запись не теряется. Хаос — прощай.</h1>
-            <p className="hero-subtitle reveal reveal-delay-2">Trinity — нервная система вашего бизнеса. Клиенты, записи, аналитика и WhatsApp-напоминания в одном месте. Запуск за один день.</p>
+            <div className="hero-eyebrow reveal">{t('hero.eyebrow')}</div>
+            <h1 className="reveal reveal-delay-1">{t('hero.h1')}</h1>
+            <p className="hero-subtitle reveal reveal-delay-2">{t('hero.subtitle')}</p>
 
             <div className="hero-buttons reveal reveal-delay-3">
-              <a href="/demo/register" className="btn-gold">Попробовать бесплатно →</a>
-              <a href="#features" className="btn-ghost">Посмотреть возможности</a>
+              <a href="/demo/register" className="btn-gold">{t('hero.cta')}</a>
+              <a href="#features" className="btn-ghost">{t('hero.cta2')}</a>
             </div>
             <div className="hero-stats reveal reveal-delay-4">
               <div className="hero-stat">
-                <div className="val">90%</div>
-                <div className="label">открываемость WhatsApp</div>
+                <div className="val">{t('hero.stat1.val')}</div>
+                <div className="label">{t('hero.stat1.lbl')}</div>
               </div>
               <div className="hero-stat">
-                <div className="val">5 мин</div>
-                <div className="label">на запуск системы</div>
+                <div className="val">{t('hero.stat2.val')}</div>
+                <div className="label">{t('hero.stat2.lbl')}</div>
               </div>
               <div className="hero-stat">
-                <div className="val">0₪</div>
-                <div className="label">скрытых комиссий</div>
+                <div className="val">{t('hero.stat3.val')}</div>
+                <div className="label">{t('hero.stat3.lbl')}</div>
               </div>
             </div>
           </div>
@@ -1473,7 +1535,7 @@ body {
 
         {/* INDUSTRIES STRIP */}
         <section className="no-snap industries-strip">
-          <h3>Для кого Trinity</h3>
+          <h3>{t('industries.title')}</h3>
           <div className="marquee-track">
             <div className="industry-pill">Салоны красоты</div>
             <div className="industry-pill">Косметологические клиники</div>
@@ -1496,36 +1558,36 @@ body {
 
         {/* PAIN POINTS */}
         <section className="snap-section pain-section" id="problems">
-          <h2 className="section-heading reveal">Бизнес растёт, а хаос не уменьшается</h2>
+          <h2 className="section-heading reveal">{t('pain.heading')}</h2>
           <div className="pain-grid">
             <div className="pain-card reveal reveal-delay-1">
               <div className="icon">📋</div>
-              <h4>Записи теряются</h4>
-              <p>Тетрадка, заметки в телефоне, голова — клиенты падают в щели и не возвращаются</p>
+              <h4>{t('pain.1.title')}</h4>
+              <p>{t('pain.1.text')}</p>
             </div>
             <div className="pain-card reveal reveal-delay-2">
               <div className="icon">📵</div>
-              <h4>SMS никто не читает</h4>
-              <p>Отправили напоминание — клиент не пришёл. Потому что SMS открывают 3 из 10. WhatsApp — 9 из 10</p>
+              <h4>{t('pain.2.title')}</h4>
+              <p>{t('pain.2.text')}</p>
             </div>
             <div className="pain-card reveal reveal-delay-3">
               <div className="icon">📊</div>
-              <h4>Непонятно что работает</h4>
-              <p>Кто лучший клиент? Что приносит больше денег? Без системы — просто догадки</p>
+              <h4>{t('pain.3.title')}</h4>
+              <p>{t('pain.3.text')}</p>
             </div>
           </div>
         </section>
 
         {/* FEATURES BENTO */}
         <section className="snap-section features-section" id="features">
-          <div className="section-heading reveal">Всё что нужно — в одном месте</div>
-          <p className="section-subtitle reveal reveal-delay-1">Никаких лишних кнопок. Только то что реально используется каждый день</p>
+          <div className="section-heading reveal">{t('features.heading')}</div>
+          <p className="section-subtitle reveal reveal-delay-1">{t('features.subtitle')}</p>
           <div className="bento-grid">
             <div className="bento-card whatsapp reveal reveal-delay-1">
               <div className="icon">💬</div>
-              <h4>WhatsApp рассылки</h4>
-              <p>Отправляйте акции, поздравления и напоминания прямо в WhatsApp. Открываемость 90%. Поможем подключить WhatsApp Business API.</p>
-              <div className="bento-tag">До 90% открываемость</div>
+              <h4>{t('features.wa.title')}</h4>
+              <p>{t('features.wa.text')}</p>
+              <div className="bento-tag">{t('features.wa.tag')}</div>
               <div className="mini-chat">
                 <div className="chat-bubble outgoing">Здравствуйте, Анна! Напоминаем о записи завтра в 14:00 💋</div>
                 <div className="chat-bubble incoming">Спасибо! Буду вовремя 👍</div>
@@ -1535,22 +1597,22 @@ body {
 
             <div className="bento-card clients reveal reveal-delay-2">
               <div className="icon">👥</div>
-              <h4>База клиентов</h4>
-              <p>Вся история каждого клиента: визиты, предпочтения, расходы, заметки. Всё в одном профиле.</p>
-              <div className="bento-tag">Всегда под рукой</div>
+              <h4>{t('features.cl.title')}</h4>
+              <p>{t('features.cl.text')}</p>
+              <div className="bento-tag">{t('features.cl.tag')}</div>
             </div>
             <div className="bento-card diary reveal reveal-delay-3">
               <div className="icon">📅</div>
-              <h4>Дневник записей</h4>
-              <p>Удобный календарь с напоминаниями. Клиент записался — система сама напомнит через WhatsApp.</p>
-              <div className="bento-tag">Авто-напоминания</div>
+              <h4>{t('features.di.title')}</h4>
+              <p>{t('features.di.text')}</p>
+              <div className="bento-tag">{t('features.di.tag')}</div>
             </div>
 
             <div className="bento-card analytics reveal reveal-delay-4">
               <div className="icon">📈</div>
-              <h4>Аналитика</h4>
-              <p>Доход за день, месяц, год. Лучшие клиенты. Самые прибыльные услуги. Нажатием кнопки.</p>
-              <div className="bento-tag">Решения на данных</div>
+              <h4>{t('features.an.title')}</h4>
+              <p>{t('features.an.text')}</p>
+              <div className="bento-tag">{t('features.an.tag')}</div>
               <div className="mini-chart">
                 <div className="chart-bar" style={{ height: '35%' }} />
                 <div className="chart-bar" style={{ height: '55%' }} />
@@ -1567,83 +1629,83 @@ body {
 
             <div className="bento-card stock reveal reveal-delay-5">
               <div className="icon">📦</div>
-              <h4>Склад и материалы</h4>
-              <p>Следите за остатками. Система напомнит когда пора заказывать. Автосписание при продаже.</p>
-              <div className="bento-tag">Умный учёт</div>
+              <h4>{t('features.st.title')}</h4>
+              <p>{t('features.st.text')}</p>
+              <div className="bento-tag">{t('features.st.tag')}</div>
             </div>
             <div className="bento-card payments reveal reveal-delay-6">
               <div className="icon">💰</div>
-              <h4>Продажи и оплаты</h4>
-              <p>Фиксируйте платежи, видите долги, следите за выручкой. Полная картина за любой период.</p>
-              <div className="bento-tag">Прозрачность</div>
+              <h4>{t('features.pa.title')}</h4>
+              <p>{t('features.pa.text')}</p>
+              <div className="bento-tag">{t('features.pa.tag')}</div>
             </div>
           </div>
         </section>
 
         {/* HOW IT WORKS */}
         <section className="snap-section how-section" id="how">
-          <h2 className="section-heading reveal">Запуск за один день</h2>
-          <p className="section-subtitle reveal reveal-delay-1">Мы приезжаем, настраиваем, обучаем. Вы просто начинаете работать.</p>
+          <h2 className="section-heading reveal">{t('how.heading')}</h2>
+          <p className="section-subtitle reveal reveal-delay-1">{t('how.subtitle')}</p>
           <div className="steps-container">
             <div className="step-card reveal reveal-delay-1">
               <div className="step-num">01</div>
-              <h4>Встреча и демо</h4>
-              <p>Показываем систему вживую, отвечаем на все вопросы. Никаких обязательств.</p>
+              <h4>{t('how.1.title')}</h4>
+              <p>{t('how.1.text')}</p>
             </div>
             <div className="step-card reveal reveal-delay-2">
               <div className="step-num">02</div>
-              <h4>Настройка</h4>
-              <p>Приезжаем и настраиваем всё под ваш бизнес. Переносим существующие данные.</p>
+              <h4>{t('how.2.title')}</h4>
+              <p>{t('how.2.text')}</p>
             </div>
             <div className="step-card reveal reveal-delay-3">
               <div className="step-num">03</div>
-              <h4>Обучение</h4>
-              <p>Объясняем как пользоваться. Вы и ваши сотрудники готовы за пару часов.</p>
+              <h4>{t('how.3.title')}</h4>
+              <p>{t('how.3.text')}</p>
             </div>
             <div className="step-card reveal reveal-delay-4">
               <div className="step-num">04</div>
-              <h4>Работаете</h4>
-              <p>Мы на связи. Любой вопрос — пишите. Система обновляется автоматически.</p>
+              <h4>{t('how.4.title')}</h4>
+              <p>{t('how.4.text')}</p>
             </div>
           </div>
         </section>
 
         {/* SECURITY */}
         <section className="snap-section security-section" id="security">
-          <h2 className="section-heading reveal">Ваши данные — только ваши</h2>
-          <p className="section-subtitle reveal reveal-delay-1">Доверяете нам клиентскую базу — мы относимся к этому серьёзно.</p>
+          <h2 className="section-heading reveal">{t('security.heading')}</h2>
+          <p className="section-subtitle reveal reveal-delay-1">{t('security.subtitle')}</p>
           <div className="security-grid">
             <div className="security-card reveal reveal-delay-1">
               <div className="icon">🔐</div>
-              <h4>Шифрование SSL/TLS</h4>
-              <p>Все данные передаются по защищённому протоколу. Никто не перехватит.</p>
+              <h4>{t('security.1.title')}</h4>
+              <p>{t('security.1.text')}</p>
             </div>
             <div className="security-card reveal reveal-delay-2">
               <div className="icon">💾</div>
-              <h4>Ежедневные бэкапы</h4>
-              <p>Автоматическое резервное копирование каждый день. Данные не пропадут.</p>
+              <h4>{t('security.2.title')}</h4>
+              <p>{t('security.2.text')}</p>
             </div>
             <div className="security-card reveal reveal-delay-3">
               <div className="icon">🇮🇱</div>
-              <h4>Соответствие стандартам</h4>
-              <p>Работаем в соответствии с израильским законом о защите персональных данных.</p>
+              <h4>{t('security.3.title')}</h4>
+              <p>{t('security.3.text')}</p>
             </div>
             <div className="security-card reveal reveal-delay-4">
               <div className="icon">🚫</div>
-              <h4>Никакой рекламы</h4>
-              <p>Ваша клиентская база не передаётся третьим лицам и не используется для рекламы. Никогда.</p>
+              <h4>{t('security.4.title')}</h4>
+              <p>{t('security.4.text')}</p>
             </div>
           </div>
         </section>
 
         {/* PRICING */}
         <section className="snap-section pricing-section" id="pricing">
-          <h2 className="section-heading reveal">Честные цены. Без сюрпризов.</h2>
-          <p className="section-subtitle reveal reveal-delay-1">Платите только за то что используете. Никаких скрытых комиссий.</p>
+          <h2 className="section-heading reveal">{t('pricing.heading')}</h2>
+          <p className="section-subtitle reveal reveal-delay-1">{t('pricing.subtitle')}</p>
           <div className="pricing-scroll reveal reveal-delay-2">
             <div className="pricing-card">
               <h4>Base</h4>
-              <div className="pricing-price">₪199 <span>/ мес</span></div>
+              <div className="pricing-price">₪199 <span>{t('pricing.period')}</span></div>
               <div className="pricing-period" />
               <ul className="pricing-features">
                 <li>Клиенты</li>
@@ -1651,12 +1713,12 @@ body {
                 <li>Дневник и задачи</li>
                 <li>Склад</li>
               </ul>
-              <a href="#contacts" className="btn-ghost">Выбрать</a>
+              <a href="#contacts" className="btn-ghost">{t('pricing.cta.select')}</a>
             </div>
             <div className="pricing-card featured">
-              <div className="pricing-badge">Рекомендован</div>
+              <div className="pricing-badge">{t('pricing.badge.recommended')}</div>
               <h4>Pro</h4>
-              <div className="pricing-price">₪249 <span>/ мес</span></div>
+              <div className="pricing-price">₪249 <span>{t('pricing.period')}</span></div>
               <div className="pricing-period" />
               <ul className="pricing-features">
                 <li>Всё из Base</li>
@@ -1664,13 +1726,13 @@ body {
                 <li>Статистика и отчёты</li>
                 <li>SMS и напоминания</li>
               </ul>
-              <a href="#contacts" className="btn-gold">Выбрать</a>
+              <a href="#contacts" className="btn-gold">{t('pricing.cta.select')}</a>
             </div>
 
             <div className="pricing-card">
-              <div className="pricing-badge" style={{ background: 'rgba(255,255,255,.1)', color: '#fff' }}>Для бизнеса</div>
+              <div className="pricing-badge" style={{ background: 'rgba(255,255,255,.1)', color: '#fff' }}>{t('pricing.badge.business')}</div>
               <h4>Enterprise</h4>
-              <div className="pricing-price">₪499 <span>/ мес</span></div>
+              <div className="pricing-price">₪499 <span>{t('pricing.period')}</span></div>
               <div className="pricing-period" />
               <ul className="pricing-features">
                 <li>Всё из Base и Pro</li>
@@ -1678,7 +1740,7 @@ body {
                 <li>Программа лояльности</li>
                 <li>До 5 работников</li>
               </ul>
-              <a href="#contacts" className="btn-ghost">Выбрать</a>
+              <a href="#contacts" className="btn-ghost">{t('pricing.cta.select')}</a>
             </div>
             <div className="pricing-card">
               <h4>Индивидуальная</h4>
@@ -1690,29 +1752,29 @@ body {
                 <li>Приоритетная поддержка</li>
                 <li>Скидка до 15% от 5+ модулей</li>
               </ul>
-              <a href="#contacts" className="btn-ghost">Выбрать</a>
+              <a href="#contacts" className="btn-ghost">{t('pricing.cta.select')}</a>
             </div>
           </div>
         </section>
 
         {/* REVIEWS */}
         <section className="snap-section reviews-section" id="reviews">
-          <h2 className="section-heading reveal">Что говорят наши клиенты</h2>
-          <p className="section-subtitle reveal reveal-delay-1">Реальные владельцы бизнеса о работе с Trinity</p>
+          <h2 className="section-heading reveal">{t('reviews.heading')}</h2>
+          <p className="section-subtitle reveal reveal-delay-1">{t('reviews.subtitle')}</p>
           <div className="reviews-grid">
             <div className="review-card reveal reveal-delay-2">
-              <div className="quote-mark">“</div>
-              <div className="review-stars">★★★★★</div>
-              <blockquote>Раньше вела всё в тетрадке и постоянно теряла клиентов. Теперь система сама напоминает через WhatsApp — пропусков стало в разы меньше.</blockquote>
-              <div className="review-author">Анета</div>
-              <div className="review-role">Владелица салона Beautymania</div>
+              <div className="quote-mark">&#8220;</div>
+              <div className="review-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+              <blockquote>{t('reviews.1.text')}</blockquote>
+              <div className="review-author">{t('reviews.1.author')}</div>
+              <div className="review-role">{t('reviews.1.role')}</div>
             </div>
             <div className="review-card reveal reveal-delay-3">
-              <div className="quote-mark">“</div>
-              <div className="review-stars">★★★★★</div>
-              <blockquote>Влад приехал, всё настроил за один день. Теперь я вижу кто мой лучший клиент и сколько денег приносит каждая услуга. Это меняет всё.</blockquote>
-              <div className="review-author">Ксения</div>
-              <div className="review-role">Владелица Hair Rehab</div>
+              <div className="quote-mark">&#8220;</div>
+              <div className="review-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+              <blockquote>{t('reviews.2.text')}</blockquote>
+              <div className="review-author">{t('reviews.2.author')}</div>
+              <div className="review-role">{t('reviews.2.role')}</div>
             </div>
           </div>
         </section>
@@ -1720,58 +1782,51 @@ body {
         {/* CTA + CONTACTS */}
         <section className="snap-section contacts-section" id="contacts">
           <div className="cta-block reveal">
-            <h2>Готовы навести порядок в своём бизнесе?</h2>
-            <p>Напишите нам — покажем систему вживую. Без обязательств.</p>
+            <h2>{t('contacts.cta.h2')}</h2>
+            <p>{t('contacts.cta.p')}</p>
             <div className="cta-buttons">
-              <a href="https://wa.me/972544858586" target="_blank" rel="noopener noreferrer" className="btn-gold">Написать в WhatsApp →</a>
-              <a href="#pricing" className="btn-ghost">Посмотреть тарифы</a>
+              <a href="https://wa.me/972544858586" target="_blank" rel="noopener noreferrer" className="btn-gold">{t('contacts.cta.wa')}</a>
+              <a href="#pricing" className="btn-ghost">{t('contacts.cta.pricing')}</a>
             </div>
           </div>
           <div className="contact-area reveal reveal-delay-2">
             <div className="contact-info">
-              <h3>Свяжитесь с нами</h3>
+              <h3>{t('contacts.info.h3')}</h3>
               <div className="contact-item">
                 <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-                WhatsApp: +972-54-485-8586
+                {t('contacts.wa')}
               </div>
               <div className="contact-item">
                 <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                Email: info@ambersol.co.il
+                {t('contacts.email')}
               </div>
               <div className="contact-item">
                 <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                Израиль
+                {t('contacts.location')}
               </div>
             </div>
-
-            <form
-              className="contact-form"
-              onSubmit={(e) => {
-                e.preventDefault()
-                alert('Спасибо! Мы свяжемся с вами в ближайшее время.')
-              }}
-            >
-              <input type="text" placeholder="Имя" required />
-              <input type="email" placeholder="Email" required />
-              <input type="tel" placeholder="Телефон" />
-              <textarea placeholder="Сообщение" rows={3} />
-              <button type="submit" className="btn-gold">Отправить</button>
+            <form className="contact-form" onSubmit={(e) => { e.preventDefault(); alert('ok'); }}>
+              <input type="text" placeholder={t('contacts.form.name')} required />
+              <input type="email" placeholder={t('contacts.form.email')} required />
+              <input type="tel" placeholder={t('contacts.form.phone')} />
+              <textarea placeholder={t('contacts.form.msg')} rows={3} />
+              <button type="submit" className="btn-gold">{t('contacts.form.submit')}</button>
             </form>
           </div>
         </section>
 
         {/* FOOTER */}
         <footer className="footer">
-          <div>© 2025 Amber Solutions. Все права защищены.</div>
+          <div>{t('footer.copy')}</div>
           <div className="footer-links">
-            <a href="#features">Возможности</a>
-            <a href="#pricing">Тарифы</a>
-            <a href="https://wa.me/972544858586" target="_blank" rel="noopener noreferrer">Поддержка</a>
-            <a href="#contacts">Контакты</a>
+            <a href="#features">{t('footer.features')}</a>
+            <a href="#pricing">{t('footer.pricing')}</a>
+            <a href="https://wa.me/972544858586" target="_blank" rel="noopener noreferrer">{t('footer.support')}</a>
+            <a href="#contacts">{t('footer.contacts')}</a>
           </div>
         </footer>
 
       </main>
-    </>
+    </div>
   )
 }

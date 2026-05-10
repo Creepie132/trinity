@@ -1146,7 +1146,12 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 40px;
+  padding: 60px 40px 80px;
+}
+@media (max-width: 768px) {
+  .contacts-section {
+    padding: 60px 20px 100px;
+  }
 }
 
 .cta-block {
@@ -1803,7 +1808,7 @@ body {
         </section>
 
         {/* CTA + CONTACTS */}
-        <section className="snap-section contacts-section" id="contacts">
+        <section className="no-snap contacts-section" id="contacts">
           <div className="cta-block reveal">
             <h2>{t('contacts.cta.h2')}</h2>
             <p>{t('contacts.cta.p')}</p>

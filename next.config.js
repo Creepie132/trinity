@@ -113,6 +113,12 @@ const nextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 30,
   },
 
+  // ─── Asset prefix: чанки запрашиваются напрямую с trinity-sage.vercel.app
+  // Нужно когда лендинг открывается через rewrite ambersol.co.il/trinity →
+  // trinity-sage.vercel.app/landing. Без этого браузер запрашивает
+  // /_next/static/* с ambersol.co.il где их нет → 503 → React не гидрируется.
+  assetPrefix: process.env.NODE_ENV === 'production' ? 'https://trinity-sage.vercel.app' : '',
+
   // ─── Output & build ──────────────────────────────────────────────────────
   output: 'standalone',
   productionBrowserSourceMaps: false,
@@ -133,10 +139,12 @@ const nextConfig = {
   async headers() {
     return [
       {
-        // Static assets — cache 1 year (хешированы Next.js → иммутабельны)
+        // CORS для ассетов — нужно когда ambersol.co.il грузит чанки напрямую
+        // с trinity-sage.vercel.app через assetPrefix
         source: '/_next/static/:path*',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Access-Control-Allow-Origin', value: 'https://ambersol.co.il' },
         ],
       },
       {

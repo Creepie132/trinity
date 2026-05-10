@@ -6,21 +6,23 @@ import { useLandingLang } from '@/contexts/LandingLangContext'
 export default function LandingPage() {
   const { lang, setLang, t, dir, isRTL } = useLandingLang()
   useEffect(() => {
-    // DOM-патч не нужен: (marketing)/layout.tsx уже объявляет
-    // <html lang="ru" dir="ltr"> — hydration совпадает с сервером.
-
     const mainScroll = document.getElementById('main-scroll')
-    if (!mainScroll) return
+    // root: mainScroll если есть, иначе null (viewport) — чтобы reveal работал в любом случае
+    const scrollRoot = mainScroll ?? null
 
     // Fade-up reveals
     const revealEls = document.querySelectorAll('.reveal')
+
+    // Сразу показываем hero элементы (первый экран всегда виден)
+    document.querySelectorAll('.hero .reveal').forEach(el => el.classList.add('visible'))
+
     const revealObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) entry.target.classList.add('visible')
         })
       },
-      { threshold: 0.12, root: mainScroll }
+      { threshold: 0.08, root: scrollRoot }
     )
     revealEls.forEach((el) => revealObserver.observe(el))
 
@@ -46,7 +48,7 @@ export default function LandingPage() {
           }
         })
       },
-      { threshold: [0.25, 0.5], root: mainScroll }
+      { threshold: [0.25, 0.5], root: scrollRoot }
     )
 
     sectionIds.forEach((id) => {

@@ -374,19 +374,16 @@ body {
   margin-left: var(--sidebar-w);
   height: 100vh;
   overflow-y: auto;
-  scroll-snap-type: y mandatory;
   scroll-behavior: smooth;
 }
 
 .snap-section {
-  scroll-snap-align: start;
   min-height: 100vh;
   position: relative;
   overflow: visible;
 }
 
 .no-snap {
-  scroll-snap-align: none;
   min-height: auto;
 }
 
@@ -1360,12 +1357,10 @@ body {
 
   .main-scroll {
     margin-left: 0;
-    scroll-snap-type: none;
     padding-bottom: 72px;
   }
 
   .snap-section {
-    scroll-snap-align: none;
     min-height: auto;
   }
 

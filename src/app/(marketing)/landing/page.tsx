@@ -1617,9 +1617,9 @@ body {
               <p>{t('features.wa.text')}</p>
               <div className="bento-tag">{t('features.wa.tag')}</div>
               <div className="mini-chat">
-                <div className="chat-bubble outgoing">Здравствуйте, Анна! Напоминаем о записи завтра в 14:00 💋</div>
-                <div className="chat-bubble incoming">Спасибо! Буду вовремя 👍</div>
-                <div className="chat-bubble outgoing">Отлично! Ждём вас в салоне ✨</div>
+                <div className="chat-bubble outgoing">{t('features.wa.chat1')}</div>
+                <div className="chat-bubble incoming">{t('features.wa.chat2')}</div>
+                <div className="chat-bubble outgoing">{t('features.wa.chat3')}</div>
               </div>
             </div>
 
@@ -1736,10 +1736,10 @@ body {
               <div className="pricing-price">₪199 <span>{t('pricing.period')}</span></div>
               <div className="pricing-period" />
               <ul className="pricing-features">
-                <li>Клиенты</li>
-                <li>Визиты / Записи</li>
-                <li>Дневник и задачи</li>
-                <li>Склад</li>
+                <li>{t('pricing.base.1')}</li>
+                <li>{t('pricing.base.2')}</li>
+                <li>{t('pricing.base.3')}</li>
+                <li>{t('pricing.base.4')}</li>
               </ul>
               <a href="#contacts" className="btn-ghost">{t('pricing.cta.select')}</a>
             </div>
@@ -1749,10 +1749,10 @@ body {
               <div className="pricing-price">₪249 <span>{t('pricing.period')}</span></div>
               <div className="pricing-period" />
               <ul className="pricing-features">
-                <li>Всё из Base</li>
-                <li>Онлайн-запись</li>
-                <li>Статистика и отчёты</li>
-                <li>SMS и напоминания</li>
+                <li>{t('pricing.pro.1')}</li>
+                <li>{t('pricing.pro.2')}</li>
+                <li>{t('pricing.pro.3')}</li>
+                <li>{t('pricing.pro.4')}</li>
               </ul>
               <a href="#contacts" className="btn-gold">{t('pricing.cta.select')}</a>
             </div>
@@ -1763,22 +1763,22 @@ body {
               <div className="pricing-price">₪499 <span>{t('pricing.period')}</span></div>
               <div className="pricing-period" />
               <ul className="pricing-features">
-                <li>Всё из Base и Pro</li>
-                <li>Филиалы</li>
-                <li>Программа лояльности</li>
-                <li>До 5 работников</li>
+                <li>{t('pricing.enterprise.1')}</li>
+                <li>{t('pricing.enterprise.2')}</li>
+                <li>{t('pricing.enterprise.3')}</li>
+                <li>{t('pricing.enterprise.4')}</li>
               </ul>
               <a href="#contacts" className="btn-ghost">{t('pricing.cta.select')}</a>
             </div>
             <div className="pricing-card">
-              <h4>Индивидуальная</h4>
-              <div className="pricing-price">По выбору</div>
+              <h4>{t('pricing.custom.title')}</h4>
+              <div className="pricing-price">{t('pricing.custom.price')}</div>
               <div className="pricing-period" />
               <ul className="pricing-features">
-                <li>Выберите нужные модули</li>
-                <li>Инд. конфигурация</li>
-                <li>Приоритетная поддержка</li>
-                <li>Скидка до 15% от 5+ модулей</li>
+                <li>{t('pricing.custom.1')}</li>
+                <li>{t('pricing.custom.2')}</li>
+                <li>{t('pricing.custom.3')}</li>
+                <li>{t('pricing.custom.4')}</li>
               </ul>
               <a href="#contacts" className="btn-ghost">{t('pricing.cta.select')}</a>
             </div>

@@ -44,6 +44,14 @@ const translations: Record<LandingLang, Record<string, string>> = {
 
     // Industries
     'industries.title': 'Для кого Trinity',
+    'industries.0': 'Салоны красоты',
+    'industries.1': 'Косметологические клиники',
+    'industries.2': 'Магазины мебели',
+    'industries.3': 'Цветочные магазины',
+    'industries.4': 'Медицинские кабинеты',
+    'industries.5': 'Фотостудии',
+    'industries.6': 'Автомастерские',
+    'industries.7': 'Ветеринарные клиники',
 
     // Pain
     'pain.heading': 'Бизнес растёт, а хаос не уменьшается',
@@ -164,6 +172,14 @@ const translations: Record<LandingLang, Record<string, string>> = {
     'hero.stat3.lbl': 'hidden fees',
 
     'industries.title': 'Who is Trinity for',
+    'industries.0': 'Beauty salons',
+    'industries.1': 'Cosmetology clinics',
+    'industries.2': 'Furniture stores',
+    'industries.3': 'Flower shops',
+    'industries.4': 'Medical offices',
+    'industries.5': 'Photography studios',
+    'industries.6': 'Car repair shops',
+    'industries.7': 'Veterinary clinics',
 
     'pain.heading': 'Business grows, but the chaos doesn\'t go away',
     'pain.1.title': 'Bookings get lost',
@@ -276,6 +292,14 @@ const translations: Record<LandingLang, Record<string, string>> = {
     'hero.stat3.lbl': 'עמלות נסתרות',
 
     'industries.title': 'למי מיועדת Trinity',
+    'industries.0': 'מכוני יופי',
+    'industries.1': 'קליניקות קוסמטיקה',
+    'industries.2': 'חנויות רהיטים',
+    'industries.3': 'חנויות פרחים',
+    'industries.4': 'מרפאות',
+    'industries.5': 'סטודיות צילום',
+    'industries.6': 'מוסכים',
+    'industries.7': 'קליניקות וטרינריות',
 
     'pain.heading': 'העסק גדל, הכאוס לא קטן',
     'pain.1.title': 'תורים אובדים',

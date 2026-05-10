@@ -1537,22 +1537,9 @@ body {
         <section className="no-snap industries-strip">
           <h3>{t('industries.title')}</h3>
           <div className="marquee-track">
-            <div className="industry-pill">Салоны красоты</div>
-            <div className="industry-pill">Косметологические клиники</div>
-            <div className="industry-pill">Магазины мебели</div>
-            <div className="industry-pill">Цветочные магазины</div>
-            <div className="industry-pill">Медицинские кабинеты</div>
-            <div className="industry-pill">Фотостудии</div>
-            <div className="industry-pill">Автомастерские</div>
-            <div className="industry-pill">Ветеринарные клиники</div>
-            <div className="industry-pill">Салоны красоты</div>
-            <div className="industry-pill">Косметологические клиники</div>
-            <div className="industry-pill">Магазины мебели</div>
-            <div className="industry-pill">Цветочные магазины</div>
-            <div className="industry-pill">Медицинские кабинеты</div>
-            <div className="industry-pill">Фотостудии</div>
-            <div className="industry-pill">Автомастерские</div>
-            <div className="industry-pill">Ветеринарные клиники</div>
+            {[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7].map((i, idx) => (
+              <div key={idx} className="industry-pill">{t(`industries.${i}`)}</div>
+            ))}
           </div>
         </section>
 

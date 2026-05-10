@@ -7,33 +7,34 @@ export default function LandingPage() {
   const { lang, setLang, t, dir, isRTL } = useLandingLang()
   useEffect(() => {
     const mainScroll = document.getElementById('main-scroll')
-    // ВАЖНО: root всегда null (viewport) — с root=mainScroll Observer не стреляет корректно
-    const scrollRoot = null
 
-    // Сбрасываем <html dir> чтобы globalss.css Trinity не применял Rubik ко всему лендингу
+    // Сбрасываем <html dir> чтобы globals.css Trinity не применял Rubik ко всему лендингу
     const prevDir = document.documentElement.getAttribute('dir')
     const prevLang = document.documentElement.getAttribute('lang')
     document.documentElement.setAttribute('dir', 'ltr')
     document.documentElement.setAttribute('lang', 'ru')
 
-    // Fade-up reveals
-    const revealEls = document.querySelectorAll('.reveal')
+    // Функция проверки видимости элемента в scrollable контейнере
+    function isInView(el: Element): boolean {
+      if (!mainScroll) return true
+      const containerRect = mainScroll.getBoundingClientRect()
+      const elRect = el.getBoundingClientRect()
+      return elRect.top < containerRect.bottom + 100 && elRect.bottom > containerRect.top - 100
+    }
 
-    // Сразу показываем hero элементы (первый экран всегда виден)
-    // Делаем через setTimeout(0) чтобы гарантировать что DOM уже в DOM после hydration
-    const heroRevealTimer = setTimeout(() => {
-      document.querySelectorAll('.hero .reveal').forEach(el => el.classList.add('visible'))
-    }, 0)
+    // Показываем элементы которые сейчас видимы
+    function revealVisible() {
+      document.querySelectorAll('.reveal').forEach(el => {
+        if (isInView(el)) el.classList.add('visible')
+      })
+    }
 
-    const revealObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) entry.target.classList.add('visible')
-        })
-      },
-      { threshold: 0.08, root: scrollRoot }
-    )
-    revealEls.forEach((el) => revealObserver.observe(el))
+    // Сразу показываем всё видимое (hero всегда виден)
+    const heroRevealTimer = setTimeout(revealVisible, 50)
+
+    // Слушаем скролл в main-scroll контейнере
+    const scrollHandler = () => revealVisible()
+    if (mainScroll) mainScroll.addEventListener('scroll', scrollHandler, { passive: true })
 
     // Active section tracking
     const sectionIds = ['home', 'problems', 'features', 'how', 'security', 'pricing', 'reviews', 'contacts']
@@ -57,7 +58,7 @@ export default function LandingPage() {
           }
         })
       },
-      { threshold: [0.25, 0.5], root: scrollRoot }
+      { threshold: [0.25, 0.5], root: mainScroll ?? null }
     )
 
     sectionIds.forEach((id) => {
@@ -80,7 +81,7 @@ export default function LandingPage() {
 
     return () => {
       clearTimeout(heroRevealTimer)
-      revealObserver.disconnect()
+      if (mainScroll) mainScroll.removeEventListener('scroll', scrollHandler)
       sectionObserver.disconnect()
       anchors.forEach((a) => a.removeEventListener('click', clickHandler))
       // Восстанавливаем html attrs

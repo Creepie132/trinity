@@ -3,7 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 
 // ─── Public paths — O(1) Set lookup ──────────────────────────────────────────
 const PUBLIC_PATH_SET = new Set([
-  '/', '/login', '/unauthorized', '/blocked', '/landing',
+  '/', '/login', '/unauthorized', '/blocked', '/landing', '/trinity',
   '/terms', '/policy', '/pricing', '/access-pending',
   '/subscription-expired', '/onboarding', '/callback',
   '/payment-success', '/payment-failed', '/payment/success', '/payment/fail',
@@ -56,10 +56,10 @@ export async function middleware(req: NextRequest) {
   // Корневой '/' тоже считается landing — он делает redirect('/landing') и не требует auth/DB.
   const baseHeaders = new Headers(req.headers)
   baseHeaders.set('x-pathname', pathname)
-  baseHeaders.set('x-trinity-page', (pathname.startsWith('/landing') || pathname === '/') ? 'landing' : 'app')
+  baseHeaders.set('x-trinity-page', (pathname.startsWith('/landing') || pathname.startsWith('/trinity') || pathname === '/') ? 'landing' : 'app')
 
   if (isPublicPath(pathname)) {
-    const isLanding = pathname === '/landing' || pathname.startsWith('/landing/') || pathname === '/'
+    const isLanding = pathname === '/landing' || pathname.startsWith('/landing/') || pathname === '/trinity' || pathname.startsWith('/trinity/') || pathname === '/'
 
     const res = NextResponse.next({ request: { headers: baseHeaders } })
     if (isLanding) {

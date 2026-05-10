@@ -117,7 +117,7 @@ const nextConfig = {
   // Нужно когда лендинг открывается через rewrite ambersol.co.il/trinity →
   // trinity-sage.vercel.app/landing. Без этого браузер запрашивает
   // /_next/static/* с ambersol.co.il где их нет → 503 → React не гидрируется.
-  assetPrefix: process.env.NODE_ENV === 'production' ? 'https://trinity-sage.vercel.app' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? 'https://app.ambersol.co.il' : '',
 
   // ─── Output & build ──────────────────────────────────────────────────────
   output: 'standalone',
@@ -144,7 +144,7 @@ const nextConfig = {
         source: '/_next/static/:path*',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-          { key: 'Access-Control-Allow-Origin', value: 'https://ambersol.co.il' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
         ],
       },
       {

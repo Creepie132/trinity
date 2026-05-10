@@ -1441,7 +1441,7 @@ body {
       {/* ===== SIDEBAR ===== */}
       <aside className="sidebar">
         <div className="sidebar-logo">
-          <img src="https://trinity-sage.vercel.app/trinity-logo-new.png" alt="Trinity CRM" />
+          <img src="https://app.ambersol.co.il/trinity-logo-new.png" alt="Trinity CRM" />
           <span>Trinity</span>
         </div>
         <nav className="sidebar-nav">
@@ -1476,7 +1476,7 @@ body {
         </nav>
 
         <div className="sidebar-bottom">
-          <a href="https://trinity-sage.vercel.app/login">
+          <a href="https://app.ambersol.co.il/login">
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="1.5"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
             <span>{t('nav.login')}</span>
           </a>
@@ -1546,7 +1546,7 @@ body {
             <p className="hero-subtitle reveal reveal-delay-2">{t('hero.subtitle')}</p>
 
             <div className="hero-buttons reveal reveal-delay-3">
-              <a href="https://trinity-sage.vercel.app/demo/register" className="btn-gold">{t('hero.cta')}</a>
+              <a href="https://app.ambersol.co.il/demo/register" className="btn-gold">{t('hero.cta')}</a>
               <a href="#features" className="btn-ghost">{t('hero.cta2')}</a>
             </div>
             <div className="hero-stats reveal reveal-delay-4">

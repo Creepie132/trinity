@@ -7,14 +7,23 @@ export default function LandingPage() {
   const { lang, setLang, t, dir, isRTL } = useLandingLang()
   useEffect(() => {
     const mainScroll = document.getElementById('main-scroll')
-    // root: mainScroll если есть, иначе null (viewport) — чтобы reveal работал в любом случае
-    const scrollRoot = mainScroll ?? null
+    // ВАЖНО: root всегда null (viewport) — с root=mainScroll Observer не стреляет корректно
+    const scrollRoot = null
+
+    // Сбрасываем <html dir> чтобы globalss.css Trinity не применял Rubik ко всему лендингу
+    const prevDir = document.documentElement.getAttribute('dir')
+    const prevLang = document.documentElement.getAttribute('lang')
+    document.documentElement.setAttribute('dir', 'ltr')
+    document.documentElement.setAttribute('lang', 'ru')
 
     // Fade-up reveals
     const revealEls = document.querySelectorAll('.reveal')
 
     // Сразу показываем hero элементы (первый экран всегда виден)
-    document.querySelectorAll('.hero .reveal').forEach(el => el.classList.add('visible'))
+    // Делаем через setTimeout(0) чтобы гарантировать что DOM уже в DOM после hydration
+    const heroRevealTimer = setTimeout(() => {
+      document.querySelectorAll('.hero .reveal').forEach(el => el.classList.add('visible'))
+    }, 0)
 
     const revealObserver = new IntersectionObserver(
       (entries) => {
@@ -70,9 +79,14 @@ export default function LandingPage() {
     anchors.forEach((a) => a.addEventListener('click', clickHandler))
 
     return () => {
+      clearTimeout(heroRevealTimer)
       revealObserver.disconnect()
       sectionObserver.disconnect()
       anchors.forEach((a) => a.removeEventListener('click', clickHandler))
+      // Восстанавливаем html attrs
+      if (prevDir) document.documentElement.setAttribute('dir', prevDir)
+      else document.documentElement.removeAttribute('dir')
+      if (prevLang) document.documentElement.setAttribute('lang', prevLang)
     }
   }, [])
 
@@ -80,6 +94,15 @@ export default function LandingPage() {
     <div dir={dir} className={isRTL ? 'landing-rtl' : ''}>
       <style>{`
 /* Нет переопределений Trinity — layout уже изолирован через route group (marketing) */
+/* Сброс RTL от Trinity root layout — лендинг всегда LTR на уровне html */
+html, html[dir="rtl"] {
+  direction: ltr !important;
+  font-family: 'Inter', sans-serif !important;
+}
+/* Переопределяем Rubik который Trinity globals.css навязывает через [dir=rtl] * */
+html[dir="rtl"] * {
+  font-family: 'Inter', sans-serif !important;
+}
 body {
   direction: ltr !important;
   font-family: 'Inter', sans-serif !important;

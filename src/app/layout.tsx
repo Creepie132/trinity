@@ -151,11 +151,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // isLanding определяется через cookie trinity_page=landing, которую middleware
-  // устанавливает при запросе /landing. Куки надёжнее чем headers() в Vercel Edge.
+  // isLanding определяется через cookie trinity_page=landing ИЛИ напрямую по x-pathname.
+  // Двойная проверка нужна: при первом заходе кука может ещё не прочитаться из request,
+  // поэтому pathname из headers — надёжный fallback.
   const cookieStore = await cookies();
+  const headersList = await headers();
+  const xPathname = headersList.get('x-pathname') ?? '';
   const trinityPage = cookieStore.get('trinity_page')?.value;
-  const isLanding = trinityPage === 'landing';
+  const isLanding = trinityPage === 'landing' ||
+    xPathname === '/trinity' || xPathname.startsWith('/trinity/') ||
+    xPathname === '/landing' || xPathname.startsWith('/landing/');
 
   if (isLanding) {
     return (

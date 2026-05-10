@@ -4,6 +4,7 @@ import "./globals.css";
 import { cookies, headers } from "next/headers";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { LandingLangProvider } from "@/contexts/LandingLangContext";
 import { Toaster } from "@/components/ui/sonner";
 import { PWARegister } from "@/components/providers/PWARegister";
 import { getUserPreferences } from "@/actions/user-preferences";
@@ -171,7 +172,9 @@ export default async function RootLayout({
           <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
         </head>
         <body suppressHydrationWarning style={{ margin: 0, padding: 0, background: '#080810', color: '#fff', fontFamily: "'Inter', sans-serif", direction: 'ltr', overflow: 'hidden' }}>
-          {children}
+          <LandingLangProvider>
+            {children}
+          </LandingLangProvider>
         </body>
       </html>
     );

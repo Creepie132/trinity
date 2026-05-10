@@ -1476,7 +1476,7 @@ body {
         </nav>
 
         <div className="sidebar-bottom">
-          <a href="/login">
+          <a href="https://trinity-sage.vercel.app/login">
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="1.5"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
             <span>{t('nav.login')}</span>
           </a>

@@ -2503,6 +2503,7 @@ export type ClientSummary = {
   created_at:     string
   org_id:         string
   assigned_to:    string | null
+  avatar_url:     string | null
   total_visits:   number
   last_visit:     string | null
   total_paid:     number

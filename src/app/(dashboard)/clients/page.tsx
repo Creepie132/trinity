@@ -24,7 +24,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { useClientSelfEditRealtime } from '@/hooks/useClientSelfEditRealtime'
 
 // ── Аватар с инициалами ───────────────────────────────────────────────────────
-function ClientAvatar({ firstName, lastName, size = 'md' }: { firstName: string; lastName: string; size?: 'sm' | 'md' }) {
+function ClientAvatar({ firstName, lastName, avatarUrl, size = 'md' }: { firstName: string; lastName: string; avatarUrl?: string | null; size?: 'sm' | 'md' }) {
   const initials = `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase()
   const colors = [
     'bg-blue-100 text-blue-700', 'bg-purple-100 text-purple-700',
@@ -33,6 +33,12 @@ function ClientAvatar({ firstName, lastName, size = 'md' }: { firstName: string;
   ]
   const colorIdx = (firstName?.charCodeAt(0) || 0) % colors.length
   const sizeClass = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm'
+  if (avatarUrl) {
+    return (
+      <img src={avatarUrl} alt={initials}
+        className={`${sizeClass} rounded-full object-cover flex-shrink-0`} />
+    )
+  }
   return (
     <div className={`${sizeClass} rounded-full flex items-center justify-center font-semibold flex-shrink-0 ${colors[colorIdx]}`}>
       {initials || '?'}
@@ -357,7 +363,7 @@ export default function ClientsPage() {
                 >
                   {/* Имя + аватар */}
                   <div className="flex items-center gap-3 min-w-0">
-                    <ClientAvatar firstName={client.first_name} lastName={client.last_name} />
+                    <ClientAvatar firstName={client.first_name} lastName={client.last_name} avatarUrl={client.avatar_url} />
                     <div className="min-w-0">
                       <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{fullName || '—'}</p>
                       {client.email && (

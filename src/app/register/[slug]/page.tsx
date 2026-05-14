@@ -25,6 +25,8 @@ const T = {
     saveChanges: 'שמור שינויים',
     saving: 'שומר...',
     notYou: 'זה לא אני — הירשם כמשתמש חדש',
+    address: 'כתובת',
+    preferredLang: 'שפת תקשורת מועדפת',
     registerTitle: 'הרשמה',
     subtitle: 'הצטרפו אלינו — מלאו את הפרטים ונוסיף אתכם למערכת',
     consent: 'קראתי ומסכים/ה ל',
@@ -62,6 +64,8 @@ const T = {
     saveChanges: 'Сохранить',
     saving: 'Сохраняем...',
     notYou: 'Это не я — зарегистрироваться как новый',
+    address: 'Адрес',
+    preferredLang: 'Предпочитаемый язык',
     registerTitle: 'Регистрация',
     subtitle: 'Заполните форму — мы добавим вас в нашу базу',
     consent: 'Я прочитал(а) и согласен(на) с ',
@@ -99,6 +103,8 @@ const T = {
     saveChanges: 'Save Changes',
     saving: 'Saving...',
     notYou: 'Not me — register as new',
+    address: 'Address',
+    preferredLang: 'Preferred language',
     registerTitle: 'Sign Up',
     subtitle: "Fill in your details and we'll add you to our system",
     consent: 'I have read and agree to the ',
@@ -122,7 +128,7 @@ const T = {
 } as const
 
 interface OrgInfo { name: string; logo_url: string | null; privacy_policy_url: string | null; registration_logo_url: string | null; registration_subtitle: string | null; registration_photo_url: string | null }
-interface ClientData { id: string; first_name: string; last_name: string; phone: string; email: string; date_of_birth: string }
+interface ClientData { id: string; first_name: string; last_name: string; phone: string; email: string; date_of_birth: string; avatar_url?: string; address?: string; preferred_languages?: string[] }
 interface RegisterForm { first_name: string; last_name: string; phone: string; email: string; date_of_birth: string; consent: boolean }
 
 function detectLanguage(): Language {
@@ -175,7 +181,7 @@ export default function RegisterPage() {
   const [checking, setChecking] = useState(false)
 
   const [foundClient, setFoundClient] = useState<ClientData | null>(null)
-  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', email: '', date_of_birth: '' })
+  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', email: '', date_of_birth: '', address: '', preferred_language: 'he' })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
@@ -215,7 +221,14 @@ export default function RegisterPage() {
       const data = await res.json()
       if (data.found && data.client) {
         setFoundClient(data.client)
-        setEditForm({ first_name: data.client.first_name || '', last_name: data.client.last_name || '', email: data.client.email || '', date_of_birth: data.client.date_of_birth || '' })
+        setEditForm({
+          first_name: data.client.first_name || '',
+          last_name: data.client.last_name || '',
+          email: data.client.email || '',
+          date_of_birth: data.client.date_of_birth || '',
+          address: data.client.address || '',
+          preferred_language: data.client.preferred_languages?.[0] || 'he',
+        })
         setAvatarUrl(data.client.avatar_url || null)
         setStep('found')
       } else {
@@ -233,7 +246,11 @@ export default function RegisterPage() {
       const res = await fetch(`/api/register/${slug}/update`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ client_id: foundClient.id, ...editForm }),
+        body: JSON.stringify({
+          client_id: foundClient.id,
+          ...editForm,
+          preferred_languages: [editForm.preferred_language],
+        }),
       })
       if (!res.ok) { setSaveError(t.error); return }
       setSuccessType('update'); setStep('success')
@@ -456,6 +473,23 @@ export default function RegisterPage() {
             <DarkField label={t.email} dir={dir}>
               <input type="email" value={editForm.email} dir="ltr" className={darkInput}
                 onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} />
+            </DarkField>
+
+            <DarkField label={t.address} dir={dir}>
+              <input type="text" value={editForm.address} dir={dir} className={darkInput}
+                placeholder={dir === 'rtl' ? 'רחוב, עיר' : 'Улица, город'}
+                onChange={e => setEditForm(p => ({ ...p, address: e.target.value }))} />
+            </DarkField>
+
+            <DarkField label={t.preferredLang} dir={dir}>
+              <select value={editForm.preferred_language} dir={dir}
+                className={`${darkInput} cursor-pointer`}
+                onChange={e => setEditForm(p => ({ ...p, preferred_language: e.target.value }))}>
+                <option value="he">🇮🇱 עברית</option>
+                <option value="ru">🇷🇺 Русский</option>
+                <option value="en">🇺🇸 English</option>
+                <option value="ar">🇸🇦 العربية</option>
+              </select>
             </DarkField>
 
             <DarkField label={t.dob} dir={dir}>

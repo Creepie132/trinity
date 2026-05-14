@@ -20,16 +20,17 @@ export async function PATCH(
 
     const { data: org } = await supabase
       .from('organizations')
-      .select('id, registration_enabled')
+      .select('id, name, registration_enabled')
       .eq('slug', slug)
       .maybeSingle()
 
     if (!org) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     if (!org.registration_enabled) return NextResponse.json({ error: 'Disabled' }, { status: 403 })
 
+    // Verify client belongs to this org
     const { data: existing } = await supabase
       .from('clients')
-      .select('id')
+      .select('id, first_name, last_name, phone')
       .eq('id', client_id)
       .eq('org_id', org.id)
       .maybeSingle()
@@ -45,6 +46,35 @@ export async function PATCH(
     if (preferred_languages) updates.preferred_languages = preferred_languages
 
     await supabase.from('clients').update(updates).eq('id', client_id)
+
+    // Notify all users of this org
+    try {
+      const { data: orgUsers } = await supabase
+        .from('org_users')
+        .select('user_id')
+        .eq('org_id', org.id)
+
+      if (orgUsers && orgUsers.length > 0) {
+        const clientName = `${existing.first_name} ${existing.last_name}`.trim()
+        const notifications = orgUsers.map((u: { user_id: string }) => ({
+          org_id: org.id,
+          user_id: u.user_id,
+          type: 'client_self_updated',
+          title: `✏️ ${clientName}`,
+          body: existing.phone
+            ? (preferred_languages?.[0] === 'he'
+                ? `עדכן את הפרטים שלו`
+                : `обновил(а) свои данные · ${existing.phone}`)
+            : `обновил(а) свои данные`,
+          link: `/clients/${client_id}`,
+          reference_id: client_id,
+          is_read: false,
+        }))
+        await supabase.from('notifications').insert(notifications)
+      }
+    } catch (notifErr) {
+      console.error('[Update API] Notification error:', notifErr)
+    }
 
     return NextResponse.json({ success: true })
   } catch (err) {

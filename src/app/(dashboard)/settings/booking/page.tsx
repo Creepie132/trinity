@@ -901,47 +901,94 @@ function RegistrationLinkCard({
 }) {
   const [enabled, setEnabled] = useState<boolean | null>(null)
   const [privacyUrl, setPrivacyUrl] = useState('')
+  const [subtitle, setSubtitle] = useState('')
   const [orgSlug, setOrgSlug] = useState('')
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
-  // Load current values directly from organizations table
   useEffect(() => {
     if (!orgId) return
     const load = async () => {
       const supabase = createSupabaseBrowserClient()
       const { data } = await supabase
         .from('organizations')
-        .select('registration_enabled, privacy_policy_url, slug')
+        .select('registration_enabled, privacy_policy_url, slug, registration_logo_url, registration_subtitle, registration_photo_url')
         .eq('id', orgId)
         .single()
       if (data) {
         setEnabled(data.registration_enabled ?? false)
         setPrivacyUrl(data.privacy_policy_url ?? '')
         setOrgSlug(data.slug ?? '')
+        setLogoUrl(data.registration_logo_url ?? null)
+        setSubtitle(data.registration_subtitle ?? '')
+        setPhotoUrl(data.registration_photo_url ?? null)
       }
     }
     load()
   }, [orgId])
 
+  // Compress image on client before upload
+  const compressImage = (file: File, maxW: number, maxH: number, quality = 0.85): Promise<Blob> =>
+    new Promise((resolve, reject) => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        let { width, height } = img
+        if (width > maxW || height > maxH) {
+          const ratio = Math.min(maxW / width, maxH / height)
+          width = Math.round(width * ratio)
+          height = Math.round(height * ratio)
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width; canvas.height = height
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('compress failed')), 'image/webp', quality)
+      }
+      img.onerror = reject
+      img.src = url
+    })
+
+  const uploadImage = async (file: File, type: 'logo' | 'photo') => {
+    const setter = type === 'logo' ? setUploadingLogo : setUploadingPhoto
+    setter(true)
+    try {
+      const maxW = type === 'logo' ? 400 : 600
+      const maxH = type === 'logo' ? 200 : 600
+      const compressed = await compressImage(file, maxW, maxH)
+      const webpFile = new File([compressed], `${type}.webp`, { type: 'image/webp' })
+      const fd = new FormData()
+      fd.append('file', webpFile)
+      fd.append('type', type)
+      const res = await fetch('/api/registration-branding', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error || 'Upload failed'); return }
+      if (type === 'logo') setLogoUrl(data.url)
+      else setPhotoUrl(data.url)
+      toast.success(language === 'he' ? 'הועלה בהצלחה!' : 'Загружено!')
+    } catch { toast.error('Upload failed') }
+    finally { setter(false) }
+  }
+
   const save = async () => {
     if (!orgId) return
     setSaving(true)
     const supabase = createSupabaseBrowserClient()
-    await supabase
-      .from('organizations')
-      .update({
-        registration_enabled: enabled,
-        privacy_policy_url: privacyUrl || null,
-      })
-      .eq('id', orgId)
+    await supabase.from('organizations').update({
+      registration_enabled: enabled,
+      privacy_policy_url: privacyUrl || null,
+      registration_subtitle: subtitle || null,
+    }).eq('id', orgId)
     setSaving(false)
     toast.success(language === 'he' ? 'נשמר!' : 'Сохранено!')
   }
 
   const appOrigin = 'https://app.ambersol.co.il'
   const regLink = orgSlug ? `${appOrigin}/register/${orgSlug}` : ''
-
   const copyLink = () => {
     if (!regLink) return
     navigator.clipboard.writeText(regLink)
@@ -952,80 +999,104 @@ function RegistrationLinkCard({
 
   if (enabled === null) return null
 
+  const isHe = language === 'he'
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <UserPlus className="w-5 h-5 text-amber-500" />
-          {language === 'he' ? 'הרשמה עצמית של לקוחות' : 'Самостоятельная регистрация клиентов'}
+          {isHe ? 'הרשמה עצמית של לקוחות' : 'Самостоятельная регистрация клиентов'}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          {language === 'he'
-            ? 'לקוחות יוכלו להירשם לבסיס הנתונים שלך דרך קישור ייחודי'
-            : 'Клиенты смогут самостоятельно добавиться в вашу базу через уникальную ссылку'}
+      <CardContent className="space-y-5">
+        <p className="text-sm text-muted-foreground">
+          {isHe ? 'לקוחות יוכלו להירשם לבסיס הנתונים שלך דרך קישור ייחודי' : 'Клиенты смогут самостоятельно добавиться в вашу базу через уникальную ссылку'}
         </p>
 
         {/* Toggle */}
         <div className="flex items-center justify-between gap-4 min-h-[44px]">
-          <Label>{language === 'he' ? 'הפעל הרשמה עצמית' : 'Включить регистрацию'}</Label>
+          <Label>{isHe ? 'הפעל הרשמה עצמית' : 'Включить регистрацию'}</Label>
           <Switch checked={enabled} onCheckedChange={setEnabled} />
         </div>
 
-        {/* Link display — always visible */}
+        {/* Link */}
         <div className="p-3 bg-muted rounded-lg">
-          <span className="text-xs text-muted-foreground block mb-1">
-            {language === 'he' ? 'קישור לשיתוף:' : 'Ссылка для клиентов:'}
-          </span>
+          <span className="text-xs text-muted-foreground block mb-1">{isHe ? 'קישור לשיתוף:' : 'Ссылка для клиентов:'}</span>
           <div className="flex items-center gap-2">
             <code className={`text-sm font-mono font-medium break-all flex-1 ${!enabled ? 'opacity-50' : ''}`}>
               {orgSlug ? `${appOrigin}/register/${orgSlug}` : '...'}
             </code>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={copyLink}
-              disabled={!orgSlug}
-              className="flex-shrink-0"
-            >
+            <Button variant="outline" size="icon" onClick={copyLink} disabled={!orgSlug} className="flex-shrink-0">
               {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
             </Button>
           </div>
-          {!enabled && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-              {language === 'he' ? 'הרשמה מושבתת כרגע' : 'Регистрация сейчас отключена'}
-            </p>
-          )}
+          {!enabled && <p className="text-xs text-amber-600 mt-1">{isHe ? 'הרשמה מושבתת כרגע' : 'Регистрация сейчас отключена'}</p>}
         </div>
 
-        {/* Privacy Policy URL */}
-        <div className="space-y-2">
-          <Label htmlFor="privacy-url">
-            {language === 'he' ? 'קישור לתנאי השימוש (אופציונלי)' : 'Ссылка на пользовательское соглашение (опционально)'}
-          </Label>
-          <Input
-            id="privacy-url"
-            type="url"
-            value={privacyUrl}
-            onChange={e => setPrivacyUrl(e.target.value)}
-            placeholder="https://..."
-            className="w-full"
-            dir="ltr"
-          />
-          <p className="text-xs text-muted-foreground">
-            {language === 'he'
-              ? 'הלקוח יראה קישור לתנאי השימוש בטופס ההרשמה'
-              : 'Клиент увидит ссылку на соглашение в форме регистрации'}
-          </p>
+        {/* Divider */}
+        <div className="border-t pt-4">
+          <p className="text-sm font-medium mb-4">{isHe ? 'עיצוב דף ההרשמה' : 'Оформление страницы регистрации'}</p>
+
+          {/* Logo upload */}
+          <div className="space-y-2 mb-4">
+            <Label>{isHe ? 'לוגו העסק' : 'Логотип бизнеса'}</Label>
+            <div className="flex items-center gap-3">
+              {logoUrl
+                ? <img src={logoUrl} alt="logo" className="h-12 max-w-[140px] object-contain rounded border border-border" />
+                : <div className="h-12 w-28 rounded border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground">{isHe ? 'אין לוגו' : 'Нет лого'}</div>
+              }
+              <label className="cursor-pointer">
+                <input type="file" accept="image/*" className="hidden"
+                  onChange={e => e.target.files?.[0] && uploadImage(e.target.files[0], 'logo')} />
+                <Button variant="outline" size="sm" disabled={uploadingLogo} asChild>
+                  <span>{uploadingLogo ? (isHe ? 'מעלה...' : 'Загрузка...') : (isHe ? 'העלה לוגו' : 'Загрузить лого')}</span>
+                </Button>
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground">{isHe ? 'מומלץ: PNG שקוף, עד 400×200px. יסוחס אוטומטית.' : 'Рекомендуется: PNG прозрачный, до 400×200px. Сжимается автоматически.'}</p>
+          </div>
+
+          {/* Photo upload */}
+          <div className="space-y-2 mb-4">
+            <Label>{isHe ? 'תמונת פרופיל / אווטאר' : 'Фото профиля / аватар'}</Label>
+            <div className="flex items-center gap-3">
+              {photoUrl
+                ? <img src={photoUrl} alt="photo" className="h-16 w-16 object-cover rounded-full border-2 border-amber-500" />
+                : <div className="h-16 w-16 rounded-full border-2 border-dashed border-border flex items-center justify-center text-xs text-muted-foreground text-center leading-tight">{isHe ? 'אין תמונה' : 'Нет фото'}</div>
+              }
+              <label className="cursor-pointer">
+                <input type="file" accept="image/*" className="hidden"
+                  onChange={e => e.target.files?.[0] && uploadImage(e.target.files[0], 'photo')} />
+                <Button variant="outline" size="sm" disabled={uploadingPhoto} asChild>
+                  <span>{uploadingPhoto ? (isHe ? 'מעלה...' : 'Загрузка...') : (isHe ? 'העלה תמונה' : 'Загрузить фото')}</span>
+                </Button>
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground">{isHe ? 'תמונה עגולה שתופיע בראש דף ההרשמה. יסוחס ל-600×600px.' : 'Круглое фото в шапке страницы регистрации. Сжимается до 600×600px.'}</p>
+          </div>
+
+          {/* Subtitle */}
+          <div className="space-y-2 mb-4">
+            <Label htmlFor="reg-subtitle">{isHe ? 'תיאור קצר (אופציונלי)' : 'Короткое описание (опционально)'}</Label>
+            <Input id="reg-subtitle" value={subtitle}
+              onChange={e => setSubtitle(e.target.value)}
+              placeholder={isHe ? 'לדוגמה: ברוכים הבאים לסלון שלנו!' : 'Например: Добро пожаловать в наш салон!'}
+              maxLength={120} />
+            <p className="text-xs text-muted-foreground">{isHe ? 'יוצג מתחת לשם העסק בדף ההרשמה' : 'Показывается под названием бизнеса на странице регистрации'}</p>
+          </div>
+
+          {/* Privacy */}
+          <div className="space-y-2">
+            <Label htmlFor="privacy-url">{isHe ? 'קישור לתנאי שימוש (אופציונלי)' : 'Ссылка на соглашение (опционально)'}</Label>
+            <Input id="privacy-url" type="url" value={privacyUrl}
+              onChange={e => setPrivacyUrl(e.target.value)} placeholder="https://..." dir="ltr" />
+          </div>
         </div>
 
-        {/* Save */}
         <div className="flex justify-end pt-1">
           <Button onClick={save} disabled={saving} size="sm">
-            {saving
-              ? (language === 'he' ? 'שומר...' : 'Сохранение...')
-              : (language === 'he' ? 'שמור' : 'Сохранить')}
+            {saving ? (isHe ? 'שומר...' : 'Сохранение...') : (isHe ? 'שמור' : 'Сохранить')}
           </Button>
         </div>
       </CardContent>

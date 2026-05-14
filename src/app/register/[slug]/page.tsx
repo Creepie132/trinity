@@ -121,7 +121,7 @@ const T = {
   },
 } as const
 
-interface OrgInfo { name: string; logo_url: string | null; privacy_policy_url: string | null }
+interface OrgInfo { name: string; logo_url: string | null; privacy_policy_url: string | null; registration_logo_url: string | null; registration_subtitle: string | null; registration_photo_url: string | null }
 interface ClientData { id: string; first_name: string; last_name: string; phone: string; email: string; date_of_birth: string }
 interface RegisterForm { first_name: string; last_name: string; phone: string; email: string; date_of_birth: string; consent: boolean }
 
@@ -316,11 +316,34 @@ export default function RegisterPage() {
 
         {/* Header */}
         <div className={`mb-8 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
-          {orgInfo?.logo_url
-            ? <img src={orgInfo.logo_url} alt="" className="h-10 mb-4 object-contain" />
+          {/* Logo */}
+          {orgInfo?.registration_logo_url
+            ? <img src={orgInfo.registration_logo_url} alt={orgInfo.name} className="h-12 mb-4 object-contain" />
             : <p className="text-xs tracking-widest text-amber-500 uppercase mb-1">✦ {orgInfo?.name}</p>
           }
-          <h1 className="text-xl font-semibold text-zinc-100">{t.title}</h1>
+          {/* Photo avatar */}
+          {orgInfo?.registration_photo_url && (
+            <div className="flex items-center gap-3 mb-3">
+              <img src={orgInfo.registration_photo_url} alt=""
+                className="w-14 h-14 rounded-full object-cover border-2 border-amber-500/40 flex-shrink-0" />
+              <div>
+                <h1 className="text-xl font-semibold text-zinc-100">{orgInfo.name}</h1>
+                {orgInfo.registration_subtitle && (
+                  <p className="text-sm text-zinc-400 mt-0.5">{orgInfo.registration_subtitle}</p>
+                )}
+              </div>
+            </div>
+          )}
+          {/* No photo — just name */}
+          {!orgInfo?.registration_photo_url && (
+            <>
+              <h1 className="text-xl font-semibold text-zinc-100">{orgInfo?.name}</h1>
+              {orgInfo?.registration_subtitle && (
+                <p className="text-sm text-zinc-400 mt-1">{orgInfo.registration_subtitle}</p>
+              )}
+            </>
+          )}
+          <p className="text-sm text-zinc-500 mt-1">{t.title}</p>
           <LangSwitcher />
         </div>
 

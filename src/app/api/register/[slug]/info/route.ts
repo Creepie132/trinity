@@ -16,7 +16,7 @@ export async function GET(
 
     const { data: org, error } = await supabase
       .from('organizations')
-      .select('id, name, logo_url, registration_enabled, privacy_policy_url')
+      .select('id, name, logo_url, registration_enabled, privacy_policy_url, registration_logo_url, registration_subtitle, registration_photo_url')
       .eq('slug', slug)
       .maybeSingle()
 
@@ -35,6 +35,9 @@ export async function GET(
       name: org.name,
       logo_url: org.logo_url,
       privacy_policy_url: org.privacy_policy_url,
+      registration_logo_url: org.registration_logo_url,
+      registration_subtitle: org.registration_subtitle,
+      registration_photo_url: org.registration_photo_url,
     })
   } catch (err: any) {
     console.error('[Register Info API]', err)

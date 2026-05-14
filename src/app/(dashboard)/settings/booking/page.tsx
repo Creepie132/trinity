@@ -940,9 +940,10 @@ function RegistrationLinkCard({
     toast.success(language === 'he' ? 'נשמר!' : 'Сохранено!')
   }
 
-  const appOrigin = typeof window !== 'undefined' 
-    ? (process.env.NEXT_PUBLIC_APP_URL || window.location.origin)
-    : 'https://ambersol.co.il'
+  const [appOrigin, setAppOrigin] = useState('https://app.ambersol.co.il')
+  useEffect(() => {
+    setAppOrigin(process.env.NEXT_PUBLIC_APP_URL || window.location.origin)
+  }, [])
   const regLink = orgSlug ? `${appOrigin}/register/${orgSlug}` : ''
 
   const copyLink = () => {

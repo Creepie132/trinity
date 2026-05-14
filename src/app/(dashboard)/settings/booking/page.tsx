@@ -290,8 +290,7 @@ export default function BookingSettingsPage() {
   }
 
   const copyBookingLink = () => {
-    const appOrigin = process.env.NEXT_PUBLIC_APP_URL || 'https://app.ambersol.co.il'
-    const link = `${appOrigin}/book/${settings.slug}`
+    const link = `https://app.ambersol.co.il/book/${settings.slug}`
     navigator.clipboard.writeText(link)
     setCopied(true)
     toast.success(t('booking.slug.copied'))
@@ -428,7 +427,7 @@ export default function BookingSettingsPage() {
                 {language === 'he' ? 'קישור להזמנות:' : 'Ссылка для записи:'}
               </span>
               <code className="text-sm font-mono font-medium break-all">
-                {process.env.NEXT_PUBLIC_APP_URL || 'https://app.ambersol.co.il'}/book/{settings.slug || '...'}
+                https://app.ambersol.co.il/book/{settings.slug || '...'}
               </code>
             </div>
             <Button
@@ -940,10 +939,7 @@ function RegistrationLinkCard({
     toast.success(language === 'he' ? 'נשמר!' : 'Сохранено!')
   }
 
-  // Всегда используем канонический адрес приложения.
-  // window.location.origin не подходит — пользователь может зайти через
-  // ambersol.co.il (rewrite), и тогда origin будет неверным.
-  const appOrigin = process.env.NEXT_PUBLIC_APP_URL || 'https://app.ambersol.co.il'
+  const appOrigin = 'https://app.ambersol.co.il'
   const regLink = orgSlug ? `${appOrigin}/register/${orgSlug}` : ''
 
   const copyLink = () => {

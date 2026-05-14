@@ -290,7 +290,8 @@ export default function BookingSettingsPage() {
   }
 
   const copyBookingLink = () => {
-    const link = `https://ambersol.co.il/book/${settings.slug}`
+    const appOrigin = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+    const link = `${appOrigin}/book/${settings.slug}`
     navigator.clipboard.writeText(link)
     setCopied(true)
     toast.success(t('booking.slug.copied'))
@@ -427,7 +428,7 @@ export default function BookingSettingsPage() {
                 {language === 'he' ? 'קישור להזמנות:' : 'Ссылка для записи:'}
               </span>
               <code className="text-sm font-mono font-medium break-all">
-                ambersol.co.il/book/{settings.slug || '...'}
+                {(process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://app.ambersol.co.il'))}/book/{settings.slug || '...'}
               </code>
             </div>
             <Button
@@ -982,7 +983,7 @@ function RegistrationLinkCard({
           </span>
           <div className="flex items-center gap-2">
             <code className={`text-sm font-mono font-medium break-all flex-1 ${!enabled ? 'opacity-50' : ''}`}>
-              {orgSlug ? `ambersol.co.il/register/${orgSlug}` : '...'}
+              {orgSlug ? `${appOrigin}/register/${orgSlug}` : '...'}
             </code>
             <Button
               variant="outline"

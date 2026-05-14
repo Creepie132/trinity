@@ -904,11 +904,9 @@ function RegistrationLinkCard({
   const [subtitle, setSubtitle] = useState('')
   const [orgSlug, setOrgSlug] = useState('')
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
-  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   useEffect(() => {
     if (!orgId) return
@@ -916,7 +914,7 @@ function RegistrationLinkCard({
       const supabase = createSupabaseBrowserClient()
       const { data } = await supabase
         .from('organizations')
-        .select('registration_enabled, privacy_policy_url, slug, registration_logo_url, registration_subtitle, registration_photo_url')
+        .select('registration_enabled, privacy_policy_url, slug, registration_logo_url, registration_subtitle')
         .eq('id', orgId)
         .single()
       if (data) {
@@ -925,7 +923,6 @@ function RegistrationLinkCard({
         setOrgSlug(data.slug ?? '')
         setLogoUrl(data.registration_logo_url ?? null)
         setSubtitle(data.registration_subtitle ?? '')
-        setPhotoUrl(data.registration_photo_url ?? null)
       }
     }
     load()
@@ -953,25 +950,21 @@ function RegistrationLinkCard({
       img.src = url
     })
 
-  const uploadImage = async (file: File, type: 'logo' | 'photo') => {
-    const setter = type === 'logo' ? setUploadingLogo : setUploadingPhoto
-    setter(true)
+  const uploadImage = async (file: File) => {
+    setUploadingLogo(true)
     try {
-      const maxW = type === 'logo' ? 400 : 600
-      const maxH = type === 'logo' ? 200 : 600
-      const compressed = await compressImage(file, maxW, maxH)
-      const webpFile = new File([compressed], `${type}.webp`, { type: 'image/webp' })
+      const compressed = await compressImage(file, 400, 200)
+      const webpFile = new File([compressed], 'logo.webp', { type: 'image/webp' })
       const fd = new FormData()
       fd.append('file', webpFile)
-      fd.append('type', type)
+      fd.append('type', 'logo')
       const res = await fetch('/api/registration-branding', { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) { toast.error(data.error || 'Upload failed'); return }
-      if (type === 'logo') setLogoUrl(data.url)
-      else setPhotoUrl(data.url)
+      setLogoUrl(data.url)
       toast.success(language === 'he' ? 'הועלה בהצלחה!' : 'Загружено!')
     } catch { toast.error('Upload failed') }
-    finally { setter(false) }
+    finally { setUploadingLogo(false) }
   }
 
   const save = async () => {
@@ -1048,32 +1041,13 @@ function RegistrationLinkCard({
               }
               <label className="cursor-pointer">
                 <input type="file" accept="image/*" className="hidden"
-                  onChange={e => e.target.files?.[0] && uploadImage(e.target.files[0], 'logo')} />
+                  onChange={e => e.target.files?.[0] && uploadImage(e.target.files[0])} />
                 <Button variant="outline" size="sm" disabled={uploadingLogo} asChild>
                   <span>{uploadingLogo ? (isHe ? 'מעלה...' : 'Загрузка...') : (isHe ? 'העלה לוגו' : 'Загрузить лого')}</span>
                 </Button>
               </label>
             </div>
             <p className="text-xs text-muted-foreground">{isHe ? 'מומלץ: PNG שקוף, עד 400×200px. יסוחס אוטומטית.' : 'Рекомендуется: PNG прозрачный, до 400×200px. Сжимается автоматически.'}</p>
-          </div>
-
-          {/* Photo upload */}
-          <div className="space-y-2 mb-4">
-            <Label>{isHe ? 'תמונת פרופיל / אווטאר' : 'Фото профиля / аватар'}</Label>
-            <div className="flex items-center gap-3">
-              {photoUrl
-                ? <img src={photoUrl} alt="photo" className="h-16 w-16 object-cover rounded-full border-2 border-amber-500" />
-                : <div className="h-16 w-16 rounded-full border-2 border-dashed border-border flex items-center justify-center text-xs text-muted-foreground text-center leading-tight">{isHe ? 'אין תמונה' : 'Нет фото'}</div>
-              }
-              <label className="cursor-pointer">
-                <input type="file" accept="image/*" className="hidden"
-                  onChange={e => e.target.files?.[0] && uploadImage(e.target.files[0], 'photo')} />
-                <Button variant="outline" size="sm" disabled={uploadingPhoto} asChild>
-                  <span>{uploadingPhoto ? (isHe ? 'מעלה...' : 'Загрузка...') : (isHe ? 'העלה תמונה' : 'Загрузить фото')}</span>
-                </Button>
-              </label>
-            </div>
-            <p className="text-xs text-muted-foreground">{isHe ? 'תמונה עגולה שתופיע בראש דף ההרשמה. יסוחס ל-600×600px.' : 'Круглое фото в шапке страницы регистрации. Сжимается до 600×600px.'}</p>
           </div>
 
           {/* Subtitle */}

@@ -31,7 +31,7 @@ export async function GET(
 
     const { data: client } = await supabase
       .from('clients')
-      .select('id, first_name, last_name, phone, email, date_of_birth')
+      .select('id, first_name, last_name, phone, email, date_of_birth, avatar_url')
       .eq('org_id', org.id)
       .eq('phone', normalizePhone(phone))
       .maybeSingle()

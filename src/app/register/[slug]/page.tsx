@@ -178,6 +178,8 @@ export default function RegisterPage() {
   const [editForm, setEditForm] = useState({ first_name: '', last_name: '', email: '', date_of_birth: '' })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
   const [regForm, setRegForm] = useState<RegisterForm>({ first_name: '', last_name: '', phone: '', email: '', date_of_birth: '', consent: false })
   const [regErrors, setRegErrors] = useState<Record<string, string>>({})
@@ -214,6 +216,7 @@ export default function RegisterPage() {
       if (data.found && data.client) {
         setFoundClient(data.client)
         setEditForm({ first_name: data.client.first_name || '', last_name: data.client.last_name || '', email: data.client.email || '', date_of_birth: data.client.date_of_birth || '' })
+        setAvatarUrl(data.client.avatar_url || null)
         setStep('found')
       } else {
         setRegForm(prev => ({ ...prev, phone }))
@@ -236,6 +239,42 @@ export default function RegisterPage() {
       setSuccessType('update'); setStep('success')
     } catch { setSaveError(t.error) }
     finally { setSaving(false) }
+  }
+
+  const compressAvatar = (file: File): Promise<Blob> =>
+    new Promise((resolve, reject) => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        const size = 400
+        const canvas = document.createElement('canvas')
+        canvas.width = size; canvas.height = size
+        const ctx = canvas.getContext('2d')!
+        const min = Math.min(img.width, img.height)
+        const sx = (img.width - min) / 2
+        const sy = (img.height - min) / 2
+        ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size)
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('compress failed')), 'image/webp', 0.85)
+      }
+      img.onerror = reject
+      img.src = url
+    })
+
+  const handleAvatarUpload = async (file: File, phoneNum: string) => {
+    setUploadingAvatar(true)
+    try {
+      const compressed = await compressAvatar(file)
+      const webpFile = new File([compressed], 'avatar.webp', { type: 'image/webp' })
+      const fd = new FormData()
+      fd.append('file', webpFile)
+      fd.append('phone', normalizePhone(phoneNum))
+      const res = await fetch(`/api/register/${slug}/avatar`, { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) return
+      setAvatarUrl(data.url)
+    } catch { /* silent */ }
+    finally { setUploadingAvatar(false) }
   }
 
   const validateReg = (): boolean => {
@@ -373,11 +412,23 @@ export default function RegisterPage() {
         {step === 'found' && foundClient && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4">
             <div className="flex items-center gap-3 pb-4 border-b border-zinc-800">
-              <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
-                <span className="text-amber-400 font-semibold text-sm">
-                  {foundClient.first_name?.[0]?.toUpperCase() || '?'}
-                </span>
-              </div>
+              {/* Avatar */}
+              <label className="relative cursor-pointer flex-shrink-0 group">
+                <input type="file" accept="image/*" className="hidden"
+                  onChange={e => e.target.files?.[0] && handleAvatarUpload(e.target.files[0], foundClient.phone)} />
+                <div className="w-14 h-14 rounded-full border-2 border-amber-500/40 overflow-hidden bg-zinc-800 flex items-center justify-center relative">
+                  {avatarUrl
+                    ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                    : <span className="text-amber-400 font-semibold text-lg">{foundClient.first_name?.[0]?.toUpperCase() || '?'}</span>
+                  }
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    {uploadingAvatar
+                      ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      : <span className="text-white text-xs">📷</span>
+                    }
+                  </div>
+                </div>
+              </label>
               <div className={dir === 'rtl' ? 'text-right' : 'text-left'}>
                 <p className="text-sm font-semibold text-zinc-100">{t.foundTitle}, {foundClient.first_name}!</p>
                 <p className="text-xs text-zinc-500">{t.foundDesc}</p>
@@ -491,6 +542,29 @@ export default function RegisterPage() {
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />{globalError}
               </div>
             )}
+
+            {/* Avatar upload for new client */}
+            <div className="flex items-center gap-4 py-2">
+              <label className="relative cursor-pointer flex-shrink-0 group">
+                <input type="file" accept="image/*" className="hidden"
+                  onChange={e => e.target.files?.[0] && regForm.phone && handleAvatarUpload(e.target.files[0], regForm.phone)} />
+                <div className="w-14 h-14 rounded-full border-2 border-zinc-700 overflow-hidden bg-zinc-800 flex items-center justify-center relative">
+                  {avatarUrl
+                    ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                    : <span className="text-zinc-500 text-2xl">👤</span>
+                  }
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    {uploadingAvatar
+                      ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      : <span className="text-white text-xs">📷</span>
+                    }
+                  </div>
+                </div>
+              </label>
+              <p className="text-xs text-zinc-500 flex-1">
+                {dir === 'rtl' ? 'לחץ להוספת תמונת פרופיל (אופציונלי)' : 'Нажмите для добавления фото профиля (опционально)'}
+              </p>
+            </div>
 
             <button onClick={handleRegister} disabled={submitting} className={goldBtn}>
               {submitting ? <span className="w-4 h-4 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin" /> : <Check className="w-4 h-4" />}

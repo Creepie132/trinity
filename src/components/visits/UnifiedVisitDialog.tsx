@@ -1048,6 +1048,7 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
                               min={1}
                               max={999}
                               value={item.quantity}
+                              onFocus={e => e.target.select()}
                               onChange={e => {
                                 const raw = e.target.value
                                 const n = Math.max(1, Math.min(999, parseInt(raw) || 1))
@@ -1100,6 +1101,7 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
                         type="number"
                         min={0}
                         value={priceOverride !== null ? priceOverride : cartSubtotal.toFixed(2)}
+                        onFocus={e => e.target.select()}
                         onChange={e => {
                           const v = e.target.value
                           if (v === '') { setPriceOverride(null); return }

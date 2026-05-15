@@ -698,6 +698,61 @@ function StorefrontToggle({
   )
 }
 
+// ─── OrgTypeToggle ───────────────────────────────────────────────────────────
+// Переключает org_type между 'trinity' и 'payments_only'.
+// После переключения пользователь должен перелогиниться — JWT обновится Auth Hook.
+
+function OrgTypeToggle({
+  org, lang, onToggled,
+}: {
+  org: Organization & { org_type?: string }
+  lang: 'he' | 'ru'
+  onToggled: (newType: 'trinity' | 'payments_only') => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const isPaymentsOnly = (org as any).org_type === 'payments_only'
+
+  const handleToggle = async () => {
+    const newType = isPaymentsOnly ? 'trinity' : 'payments_only'
+    if (!confirm(lang === 'he'
+      ? `לשנות סוג ארגון ל-${newType === 'payments_only' ? 'תשלומים בלבד' : 'Trinity CRM'}?`
+      : `Изменить тип на ${newType === 'payments_only' ? 'Payments Only' : 'Trinity CRM'}? Пользователь должен перелогиниться.`
+    )) return
+
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/admin/organizations/${org.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ org_type: newType }),
+      })
+      if (!res.ok) throw new Error()
+      onToggled(newType)
+      toast.success(newType === 'payments_only'
+        ? (lang === 'he' ? '✅ עבר לממשק תשלומים' : '✅ Переключено на Payments Only')
+        : (lang === 'he' ? '✅ עבר ל-Trinity CRM' : '✅ Переключено на Trinity CRM')
+      )
+    } catch {
+      toast.error(lang === 'he' ? 'שגיאה' : 'Ошибка')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleToggle}
+      disabled={loading}
+      className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${isPaymentsOnly ? 'bg-amber-500' : 'bg-gray-300'} disabled:opacity-60`}
+    >
+      {loading
+        ? <Loader2 className="absolute inset-0 m-auto w-3.5 h-3.5 text-white animate-spin" />
+        : <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${isPaymentsOnly ? 'left-6' : 'left-1'}`} />
+      }
+    </button>
+  )
+}
+
 export default function AdminOrganizationsPage() {
   const { language } = useLanguage()
   const l = language === 'he'
@@ -1214,6 +1269,25 @@ export default function AdminOrganizationsPage() {
           {(org.subscription_status === 'demo' || org.subscription_status === 'trial') && (
             <ActivateOrgButton org={org} lang={language} onActivated={() => { setSelectedOrg(null); loadData() }} />
           )}
+          {/* org_type toggle: Trinity CRM ↔ Payments Only */}
+          <div className="col-span-2 flex items-center justify-between p-3 rounded-xl bg-amber-50 border border-amber-100">
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-amber-600" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">{l ? 'סוג ארגון' : 'Тип организации'}</p>
+                <p className="text-xs text-amber-500">
+                  {(org as any).org_type === 'payments_only'
+                    ? (l ? 'תשלומים בלבד — ממשק פשוט' : 'Только платежи — лёгкий интерфейс')
+                    : (l ? 'Trinity CRM — גישה מלאה' : 'Trinity CRM — полный доступ')}
+                </p>
+              </div>
+            </div>
+            <OrgTypeToggle org={org} lang={language} onToggled={(newType) => {
+              const updated = { ...org, org_type: newType } as any
+              setSelectedOrg(updated)
+              setOrgs(prev => prev.map(o => o.id === org.id ? updated : o))
+            }} />
+          </div>
           {/* has_storefront toggle */}
           <div className="col-span-2 flex items-center justify-between p-3 rounded-xl bg-teal-50 border border-teal-100">
             <div className="flex items-center gap-2">

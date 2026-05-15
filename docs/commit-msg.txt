@@ -1,31 +1,16 @@
-feat: payments Settings page + save_billing_profile RPC (pgcrypto)
+feat: org_type toggle in Admin Panel + PATCH /api/admin/organizations/[orgId]
 
-Supabase migrations (applied via MCP):
-  - payments_module: org_type enum, billing_profiles, payment_links, gateway_transactions, RLS
-  - payments_auth_hook: custom_access_token_hook пишет org_type в JWT
-  - payments_module_patch: pg_cron cleanup + updated_at на gateway_transactions
-  - payments_save_billing_rpc: save_billing_profile() — pgp_sym_encrypt внутри Postgres
-    • SECURITY DEFINER, org_id из JWT (защита от подмены)
-    • ON CONFLICT DO UPDATE — идемпотентный upsert
-    • REVOKE PUBLIC / GRANT authenticated
-    • Возвращает подтверждение БЕЗ ключа
+src/app/admin/organizations/page.tsx
+  - OrgTypeToggle компонент (amber цвет, тот же паттерн что QuickMode/Storefront)
+  - Тоггл показывает текущий тип: Trinity CRM / Payments Only
+  - Confirm диалог предупреждает что пользователь должен перелогиниться
+  - org_type отображается в detail panel рядом с другими тогглами
 
-src/app/payments/settings/actions.ts
-  - saveBillingProfile(formData) — Server Action
-    • p_encryption_key из process.env.TRANZILA_ENCRYPTION_SECRET
-    • ключ не попадает в логи Vercel (не логируем параметры при ошибке)
-  - getBillingProfile() — читает gateway+terminal_name (без api_key)
-  - SaveBillingResultOk / SaveBillingResultErr — разделённые типы для TS narrowing
+src/app/api/admin/organizations/[orgId]/route.ts
+  - PATCH handler: обновляет org_type (trinity | payments_only)
+  - Whitelist allowedFields — только явно разрешённые поля
+  - Валидация enum значений перед записью в БД
+  - Service role клиент для обхода RLS
 
-src/app/payments/settings/page.tsx
-  - Server Component: статус подключения (green/amber banner) + GatewaySettingsForm
-  - Инструкция по поиску credentials в Tranzila dashboard
-
-src/components/payments/GatewaySettingsForm.tsx
-  - Client Component: gateway selector (tranzila/cardcom), terminal name, password field
-  - Eye/EyeOff toggle, "never visible after saving" hint
-  - useTransition + Server Action (нет fetch, нет API route)
-  - Disabled кнопка при апдейте без нового ключа
-
-supabase/migrations/20260515_payments_save_billing_rpc.sql
-  - SQL файл для истории (уже применён через MCP)
+src/app/api/admin/subscriptions-list/route.ts
+  - Добавлен org_type в SELECT запрос — приходит в список орг на фронт

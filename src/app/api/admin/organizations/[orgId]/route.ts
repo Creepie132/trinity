@@ -125,3 +125,55 @@ export async function DELETE(
     return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })
   }
 }
+
+// PATCH /api/admin/organizations/[orgId]
+// Обновляет поля организации: org_type, и другие в будущем.
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ orgId: string }> }
+) {
+  try {
+    const { orgId } = await context.params
+    const supabase = await createServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { data: adminRow } = await supabaseAdmin
+      .from('admin_users').select('id').eq('user_id', user.id).maybeSingle()
+    if (!adminRow) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const body = await request.json()
+    const allowedFields = ['org_type'] as const
+    const updates: Record<string, any> = {}
+
+    for (const field of allowedFields) {
+      if (field in body) updates[field] = body[field]
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+    }
+
+    // Валидация org_type
+    if (updates.org_type && !['trinity', 'payments_only'].includes(updates.org_type)) {
+      return NextResponse.json({ error: 'Invalid org_type' }, { status: 400 })
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('organizations')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', orgId)
+      .select('id, name, org_type')
+      .single()
+
+    if (error) {
+      console.error('[patch-org] db error:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true, organization: data })
+  } catch (err: any) {
+    console.error('[patch-org] unexpected error:', err)
+    return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })
+  }
+}

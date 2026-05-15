@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
         created_at,
         tranzila_token_terminal,
         tranzila_token_password,
+        org_type,
         org_users (
           role,
           user_id,

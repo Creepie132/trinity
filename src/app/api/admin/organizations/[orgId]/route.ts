@@ -161,7 +161,7 @@ export async function PATCH(
 
     const { data, error } = await supabaseAdmin
       .from('organizations')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...updates })
       .eq('id', orgId)
       .select('id, name, org_type')
       .single()

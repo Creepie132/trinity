@@ -42,8 +42,10 @@ BEGIN
   LIMIT 1;
 
   -- ── 3. Читаем is_admin + is_sales_agent из admin_users ──────────────────
+  -- ИСПРАВЛЕНИЕ: в admin_users нет колонки is_admin — определяем по role
+  -- Суперадмин = запись в admin_users где role != 'sales_agent'
   SELECT
-    COALESCE(au.is_admin, false),
+    COALESCE(au.role != 'sales_agent', false),
     COALESCE(au.is_sales_agent, false)
   INTO v_is_admin, v_is_sales_agent
   FROM public.admin_users au

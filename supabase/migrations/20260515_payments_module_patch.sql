@@ -24,20 +24,29 @@ SELECT cron.schedule(
 );
 
 -- ────────────────────────────────────────────────────────────
--- 2. Примечание по gateway_transactions UNIQUE constraint
+-- 2. Добавляем updated_at к gateway_transactions (нужен для upsert)
 -- ────────────────────────────────────────────────────────────
--- Constraint UNIQUE(gateway, gateway_ref) уже стоит в основной миграции.
--- Это корректно: один gateway_ref = одна физическая транзакция шлюза.
--- Tranzila может прислать один webhook дважды (retry при плохом соединении) —
--- база отбросит дубль через UNIQUE constraint.
--- Webhook-обработчик должен использовать:
---   INSERT INTO gateway_transactions (...) VALUES (...)
---   ON CONFLICT (gateway, gateway_ref) DO NOTHING
---   RETURNING id
--- Если RETURNING вернул NULL — это дубль, возвращаем 200 OK без обработки.
--- НЕ добавляем status в constraint — один gateway_ref не может иметь
--- два разных статуса одновременно (шлюз отправляет финальный статус).
+ALTER TABLE public.gateway_transactions
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+
+-- ────────────────────────────────────────────────────────────
+-- 3. Стратегия ON CONFLICT для webhook-обработчика
+-- ────────────────────────────────────────────────────────────
+-- ПРАВИЛЬНАЯ стратегия: DO UPDATE SET status = EXCLUDED.status
+--
+-- Почему НЕ DO NOTHING:
+--   Tranzila шлёт webhooks последовательно: сначала pending, потом success.
+--   Оба webhook имеют один gateway_ref. Если первый (pending) записался,
+--   а второй (success) отбросился через DO NOTHING — платёж навсегда
+--   зависнет в pending. Деньги списаны, в системе — ничего.
+--
+-- Правильная стейт-машина:
+--   pending → success:  DO UPDATE — апдейт проходит ✓
+--   pending → failed:   DO UPDATE — апдейт проходит ✓
+--   success → success:  DO UPDATE — идемпотентен ✓
+--   success → pending:  невозможный кейс от легитимного шлюза;
+--                       защита в route через .neq('status','paid') на payment_links
 
 COMMENT ON CONSTRAINT gateway_transactions_gateway_gateway_ref_key
   ON public.gateway_transactions IS
-  'Идемпотентность webhook: один gateway_ref = одна транзакция. Дубли отбрасываются через ON CONFLICT DO NOTHING в webhook-обработчике.';
+  'Идемпотентность webhook: один gateway_ref = одна физическая транзакция. Webhook-обработчик использует ON CONFLICT DO UPDATE SET status=EXCLUDED.status — стейт-машина корректно обрабатывает pending→success переходы.';

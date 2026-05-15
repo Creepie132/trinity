@@ -1,39 +1,26 @@
-feat: payments module — frontend layout, routing, terminal UI
+fix: webhook state machine ON CONFLICT DO UPDATE + signature verification
 
-middleware.ts
-- payments_only роутинг: читает org_type из JWT (Edge, без запроса к БД)
-- payments_only → /payments/*, блокировка Trinity, ранний return (не проходят paywall)
-- удалён дублирующийся const isAdmin (был объявлен дважды)
+КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ:
+  DO NOTHING → DO UPDATE SET status=EXCLUDED.status, updated_at=now()
+  pending→success переход теперь корректно обрабатывается.
+  Деньги не зависают в pending при ретрае от Tranzila.
+
+src/app/api/gateway/webhook/route.ts (новый)
+  - Читает raw body через request.text() (а НЕ json()) для корректной
+    signature verification (хеши совпадают с raw телом запроса)
+  - Использует verifyTranzilaSignature() + validateTranzilaTerminal() из lib/
+  - upsert с onConflict:'gateway,gateway_ref', ignoreDuplicates:false
+    → DO UPDATE: pending→success, pending→failed — апдейт проходит
+    → success→success (retry Tranzila): идемпотентен
+  - Апдейт payment_links по idempotency_key (cField2) через .neq('status','paid')
+    защита от нелегитимного отката paid→pending
+  - Возвращает 200 при ошибке подписи (Tranzila не ретраит зацикленно)
+  - Логи с префиксом [PAYMENTS_MODULE_ERROR] и [PAYMENTS_MODULE]
 
 supabase/migrations/20260515_payments_module_patch.sql
-- pg_cron джоба cleanup-payment-links-idempotency (каждый день 03:00 UTC)
-- очищает payment_links старше 30 дней со статусом terminal
-- комментарий по стратегии ON CONFLICT DO NOTHING для webhook-обработчика
+  - ALTER TABLE gateway_transactions ADD COLUMN updated_at (для upsert)
+  - Исправлен комментарий UNIQUE constraint: DO UPDATE вместо DO NOTHING
+  - Задокументирована стейт-машина в SQL комментарии
 
-src/app/payments/layout.tsx
-- изолированный Server Component Layout для payments_only
-- проверка org_type из JWT, редирект trinity-пользователей → /dashboard
-- подключает PaymentsSidebar + PaymentsHeader (нет зависимостей Trinity CRM)
-
-src/app/payments/dashboard/page.tsx
-- Server Component: параллельный запрос today/month stats + recent 10 транзакций
-- DashboardStats + RecentTransactions компоненты
-
-src/app/payments/terminal/page.tsx
-- страница с TerminalForm
-
-src/app/payments/links/page.tsx, history/page.tsx
-- заглушки (coming soon)
-
-src/components/payments/
-- PaymentsSidebar — тёмная тема, amber акценты, CTA "Upgrade to Trinity"
-- PaymentsHeader — sign out кнопка
-- DashboardStats — today/month сумма + кол-во платежей (ILS формат)
-- RecentTransactions — статусы, иконки, клиент + сумма
-- TerminalForm — форма с idempotency_key, копирование ссылки
-
-src/app/api/gateway/create-link/route.ts
-- POST: создание платёжной ссылки через Tranzila
-- читает billing_profile из БД, строит Tranzila iframe URL
-- org_id в cField1, idempotency_key в cField2 (для webhook)
-- логи с префиксом [PAYMENTS_MODULE_ERROR]
+middleware.ts
+  - /api/gateway/webhook добавлен в PUBLIC_PATH_PREFIXES (Tranzila шлёт без авторизации)

@@ -17,6 +17,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/api/payments/tranzila/webhook', '/api/payments/tranzila-success',
   '/api/payments/tranzila-failed', '/api/payments/cardcom-success',
   '/api/payments/tranzila/success', '/api/payments/callback',
+  '/api/gateway/webhook',          // payments_only: webhook от Tranzila (без авторизации)
   '/api/booking/', '/api/contact', '/api/access/', '/api/health',
   '/api/cron/',
   '/api/webhooks/',

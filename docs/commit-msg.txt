@@ -1,26 +1,31 @@
-fix: webhook state machine ON CONFLICT DO UPDATE + signature verification
+feat: payments Settings page + save_billing_profile RPC (pgcrypto)
 
-КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ:
-  DO NOTHING → DO UPDATE SET status=EXCLUDED.status, updated_at=now()
-  pending→success переход теперь корректно обрабатывается.
-  Деньги не зависают в pending при ретрае от Tranzila.
+Supabase migrations (applied via MCP):
+  - payments_module: org_type enum, billing_profiles, payment_links, gateway_transactions, RLS
+  - payments_auth_hook: custom_access_token_hook пишет org_type в JWT
+  - payments_module_patch: pg_cron cleanup + updated_at на gateway_transactions
+  - payments_save_billing_rpc: save_billing_profile() — pgp_sym_encrypt внутри Postgres
+    • SECURITY DEFINER, org_id из JWT (защита от подмены)
+    • ON CONFLICT DO UPDATE — идемпотентный upsert
+    • REVOKE PUBLIC / GRANT authenticated
+    • Возвращает подтверждение БЕЗ ключа
 
-src/app/api/gateway/webhook/route.ts (новый)
-  - Читает raw body через request.text() (а НЕ json()) для корректной
-    signature verification (хеши совпадают с raw телом запроса)
-  - Использует verifyTranzilaSignature() + validateTranzilaTerminal() из lib/
-  - upsert с onConflict:'gateway,gateway_ref', ignoreDuplicates:false
-    → DO UPDATE: pending→success, pending→failed — апдейт проходит
-    → success→success (retry Tranzila): идемпотентен
-  - Апдейт payment_links по idempotency_key (cField2) через .neq('status','paid')
-    защита от нелегитимного отката paid→pending
-  - Возвращает 200 при ошибке подписи (Tranzila не ретраит зацикленно)
-  - Логи с префиксом [PAYMENTS_MODULE_ERROR] и [PAYMENTS_MODULE]
+src/app/payments/settings/actions.ts
+  - saveBillingProfile(formData) — Server Action
+    • p_encryption_key из process.env.TRANZILA_ENCRYPTION_SECRET
+    • ключ не попадает в логи Vercel (не логируем параметры при ошибке)
+  - getBillingProfile() — читает gateway+terminal_name (без api_key)
+  - SaveBillingResultOk / SaveBillingResultErr — разделённые типы для TS narrowing
 
-supabase/migrations/20260515_payments_module_patch.sql
-  - ALTER TABLE gateway_transactions ADD COLUMN updated_at (для upsert)
-  - Исправлен комментарий UNIQUE constraint: DO UPDATE вместо DO NOTHING
-  - Задокументирована стейт-машина в SQL комментарии
+src/app/payments/settings/page.tsx
+  - Server Component: статус подключения (green/amber banner) + GatewaySettingsForm
+  - Инструкция по поиску credentials в Tranzila dashboard
 
-middleware.ts
-  - /api/gateway/webhook добавлен в PUBLIC_PATH_PREFIXES (Tranzila шлёт без авторизации)
+src/components/payments/GatewaySettingsForm.tsx
+  - Client Component: gateway selector (tranzila/cardcom), terminal name, password field
+  - Eye/EyeOff toggle, "never visible after saving" hint
+  - useTransition + Server Action (нет fetch, нет API route)
+  - Disabled кнопка при апдейте без нового ключа
+
+supabase/migrations/20260515_payments_save_billing_rpc.sql
+  - SQL файл для истории (уже применён через MCP)

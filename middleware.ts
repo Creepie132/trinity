@@ -155,8 +155,28 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  // ── payments_only роутинг ────────────────────────────────────────────────
+  // Читаем org_type из JWT (Edge-совместимо, без запроса к БД)
+  const orgType = session.user.app_metadata?.org_type as string | undefined
+  const isPaymentsOnly = orgType === 'payments_only'
+  const isAdmin = session.user.app_metadata?.is_admin === true
+
+  if (isPaymentsOnly && !isAdmin) {
+    // payments_only не может заходить в Trinity CRM
+    const PAYMENTS_ALLOWED_PREFIXES = ['/payments', '/api/gateway/', '/api/billing/']
+    const isAllowed = PAYMENTS_ALLOWED_PREFIXES.some(p => pathname.startsWith(p))
+    if (!isAllowed) {
+      // Редирект на payments dashboard
+      // Если уже на /payments — пропускаем (защита от redirect loop)
+      if (!pathname.startsWith('/payments')) {
+        return NextResponse.redirect(new URL('/payments/dashboard', req.url))
+      }
+    }
+    // payments_only пользователи не проходят paywall-проверку Trinity
+    return response
+  }
+
   if (pathname.startsWith('/inbox')) {
-    const isAdmin = session.user.app_metadata?.is_admin === true
     if (!isAdmin) {
       const isSalesAgent = session.user.app_metadata?.is_sales_agent === true
       return NextResponse.redirect(
@@ -172,7 +192,6 @@ export async function middleware(req: NextRequest) {
   const SUB_CACHE_TTL  = 5 * 60 * 1000
 
   try {
-    const isAdmin = session.user.app_metadata?.is_admin === true
     if (isAdmin) return response
 
     const jwtOrgId = session.user.app_metadata?.org_id as string | undefined

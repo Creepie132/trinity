@@ -1,6 +1,39 @@
-fix: OAuth redirectTo uses NEXT_PUBLIC_SITE_URL instead of window.location.origin
+feat: payments module — frontend layout, routing, terminal UI
 
-When Trinity is served via rewrite (ambersol.co.il/trinity → trinity-sage.vercel.app),
-window.location.origin returns ambersol.co.il, causing Supabase to redirect
-the OAuth code to the wrong origin. Now using NEXT_PUBLIC_SITE_URL env var
-(https://trinity-sage.vercel.app) so /callback route is reached correctly.
+middleware.ts
+- payments_only роутинг: читает org_type из JWT (Edge, без запроса к БД)
+- payments_only → /payments/*, блокировка Trinity, ранний return (не проходят paywall)
+- удалён дублирующийся const isAdmin (был объявлен дважды)
+
+supabase/migrations/20260515_payments_module_patch.sql
+- pg_cron джоба cleanup-payment-links-idempotency (каждый день 03:00 UTC)
+- очищает payment_links старше 30 дней со статусом terminal
+- комментарий по стратегии ON CONFLICT DO NOTHING для webhook-обработчика
+
+src/app/payments/layout.tsx
+- изолированный Server Component Layout для payments_only
+- проверка org_type из JWT, редирект trinity-пользователей → /dashboard
+- подключает PaymentsSidebar + PaymentsHeader (нет зависимостей Trinity CRM)
+
+src/app/payments/dashboard/page.tsx
+- Server Component: параллельный запрос today/month stats + recent 10 транзакций
+- DashboardStats + RecentTransactions компоненты
+
+src/app/payments/terminal/page.tsx
+- страница с TerminalForm
+
+src/app/payments/links/page.tsx, history/page.tsx
+- заглушки (coming soon)
+
+src/components/payments/
+- PaymentsSidebar — тёмная тема, amber акценты, CTA "Upgrade to Trinity"
+- PaymentsHeader — sign out кнопка
+- DashboardStats — today/month сумма + кол-во платежей (ILS формат)
+- RecentTransactions — статусы, иконки, клиент + сумма
+- TerminalForm — форма с idempotency_key, копирование ссылки
+
+src/app/api/gateway/create-link/route.ts
+- POST: создание платёжной ссылки через Tranzila
+- читает billing_profile из БД, строит Tranzila iframe URL
+- org_id в cField1, idempotency_key в cField2 (для webhook)
+- логи с префиксом [PAYMENTS_MODULE_ERROR]

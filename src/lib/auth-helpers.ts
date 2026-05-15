@@ -19,12 +19,36 @@ export interface AuthContext {
   orgId: string        // activeOrgId — активный филиал (используется для всех запросов данных)
   mainOrgId: string    // основная org пользователя из JWT (для проверок прав)
   orgRole: string | null
+  orgType: 'trinity' | 'payments_only'  // тип организации из JWT app_metadata
   isAdmin: boolean
   supabase: SupabaseClient
 }
 
 export interface AuthError {
   error: NextResponse
+}
+
+/**
+ * Защита CRM API от пользователей payments_only.
+ * Вызывать в начале любого API route, работающего с CRM-данными
+ * (clients, visits, products, sales, payments и т.д.)
+ *
+ * Использование:
+ * ```ts
+ * const auth = await getAuthContext(request)
+ * if ('error' in auth) return auth.error
+ * const guard = requireTrinityAccess(auth)
+ * if (guard) return guard
+ * // → дальше только trinity-пользователи
+ * ```
+ */
+export function requireTrinityAccess(auth: AuthContext): NextResponse | null {
+  if (auth.isAdmin) return null  // суперадмин всегда имеет доступ
+  if (auth.orgType === 'trinity') return null
+  return NextResponse.json(
+    { error: 'CRM access requires Trinity subscription', code: 'PAYMENTS_ONLY_ACCESS' },
+    { status: 403 }
+  )
 }
 
 /**
@@ -94,6 +118,7 @@ export async function getAuthContext(request?: NextRequest): Promise<AuthContext
   // Читаем из JWT claims (быстро, без запроса к БД)
   let orgId = user.app_metadata?.org_id as string | undefined
   const orgRole = user.app_metadata?.org_role as string | null ?? null
+  const orgType = (user.app_metadata?.org_type as 'trinity' | 'payments_only') ?? 'trinity'
   const isAdmin = user.app_metadata?.is_admin === true
 
   // Fallback на org_users если JWT пустой (первый логин до refresh токена)
@@ -124,15 +149,13 @@ export async function getAuthContext(request?: NextRequest): Promise<AuthContext
   if (isAdmin) {
     const impersonateOrgId = cookieStore.get(COOKIE_ORG_ID)?.value
     if (impersonateOrgId) {
-      // При impersonation используем service role клиент — он обходит RLS.
-      // Фильтрация по orgId гарантирует изоляцию данных между org.
-      // Anon клиент суперадмина не состоит в org клиента — RLS блокировал бы запросы.
       const serviceClient = createSupabaseServiceClient()
       return {
         user,
-        orgId: impersonateOrgId,   // подменённый org
-        mainOrgId,                 // реальный org суперадмина
+        orgId: impersonateOrgId,
+        mainOrgId,
         orgRole,
+        orgType,
         isAdmin,
         supabase: serviceClient as unknown as SupabaseClient,
       }
@@ -140,7 +163,7 @@ export async function getAuthContext(request?: NextRequest): Promise<AuthContext
   }
 
   // orgId = activeOrgId чтобы все существующие роуты работали без изменений
-  return { user, orgId: activeOrgId, mainOrgId, orgRole, isAdmin, supabase: supabase as unknown as SupabaseClient }
+  return { user, orgId: activeOrgId, mainOrgId, orgRole, orgType, isAdmin, supabase: supabase as unknown as SupabaseClient }
 }
 
 /**
@@ -404,6 +427,7 @@ async function getAuthContextFromBearer(jwt: string): Promise<AuthContext | Auth
   // Читаем org_id из JWT claims (fast path)
   let orgId = user.app_metadata?.org_id as string | undefined
   const orgRole = user.app_metadata?.org_role as string | null ?? null
+  const orgType = (user.app_metadata?.org_type as 'trinity' | 'payments_only') ?? 'trinity'
   const isAdmin = user.app_metadata?.is_admin === true
 
   // Fallback: org_users таблица (первый логин до refresh токена)
@@ -436,6 +460,7 @@ async function getAuthContextFromBearer(jwt: string): Promise<AuthContext | Auth
     orgId: activeOrgId,
     mainOrgId,
     orgRole,
+    orgType,
     isAdmin,
     supabase: supabaseWithToken as unknown as SupabaseClient,
   }

@@ -1,62 +1,56 @@
 /**
- * self-healing/telegram-alerts.ts
- * Все Telegram-уведомления системы self-healing
+ * lib/self-healing/telegram-alerts.ts
+ * Все Telegram-уведомления системы self-healing.
  */
 import { sendTelegramMessage } from '@/lib/telegram'
-import type { SystemError, AiHealingLog, HealingStatus } from './types'
+import type { SystemError, AiHealingLog } from './types'
 
 const ADMIN_CHAT_ID = () => process.env.TELEGRAM_ADMIN_CHAT_ID!
 
-/** Ошибка обнаружена, начинаем анализ */
 export async function alertAnalysisStarted(error: SystemError): Promise<void> {
   await send(
-    `🔍 <b>Trinity Self-Healing</b> | Обнаружена ошибка\n\n` +
-    `📍 <b>Роут:</b> <code>${error.route}</code>\n` +
-    `❗ <b>Ошибка:</b> <code>${esc(error.error_message)}</code>\n` +
-    `🆔 <b>ID:</b> <code>${error.id}</code>\n` +
-    `🔄 Попытка: ${error.attempt_count + 1}/2\n\n` +
-    `⏳ Claude анализирует проблему...`
+    `🔍 <b>Self-Healing</b> | Ошибка обнаружена\n\n` +
+    `📍 <code>${error.route}</code>\n` +
+    `❗ <code>${esc(error.error_message)}</code>\n` +
+    `🆔 <code>${error.id}</code>\n` +
+    `🔄 Попытка: ${error.attempt_count + 1}/${2}\n\n` +
+    `⏳ Claude анализирует...`
   )
 }
 
-/** Критический путь — нужен ручной апрув */
 export async function alertCriticalPathApproval(
   error: SystemError,
-  log: AiHealingLog
+  log: Partial<AiHealingLog>
 ): Promise<void> {
   await send(
     `🔐 <b>КРИТИЧЕСКИЙ ПУТЬ</b> | Требуется апрув\n\n` +
-    `📍 <b>Роут:</b> <code>${error.route}</code>\n` +
-    `❗ <b>Ошибка:</b> <code>${esc(error.error_message)}</code>\n\n` +
-    `🤖 <b>Анализ Claude:</b>\n${esc(log.claude_analysis ?? 'N/A')}\n\n` +
-    `🔗 <b>PR:</b> ${log.pr_url ?? 'создаётся...'}\n` +
-    `🔗 <b>Preview:</b> ${log.preview_url ?? 'ожидание...'}\n\n` +
-    `⚠️ Авто-мерж <b>отключён</b> для этого роута.\n` +
-    `Проверь PR и замержь вручную.`
+    `📍 <code>${error.route}</code>\n` +
+    `❗ <code>${esc(error.error_message)}</code>\n\n` +
+    `🤖 <b>Анализ:</b>\n${esc(log.claude_analysis ?? 'N/A')}\n\n` +
+    `🔗 PR: ${log.pr_url ?? '...'}\n\n` +
+    `⚠️ Авто-мерж <b>отключён</b>. Проверь PR и замержи вручную.`
   )
 }
 
-/** Фикс сгенерирован */
 export async function alertFixGenerated(
   error: SystemError,
-  log: AiHealingLog,
+  log: Partial<AiHealingLog>,
   confidence: string
 ): Promise<void> {
-  const confIcon = confidence === 'high' ? '🟢' : confidence === 'medium' ? '🟡' : '🔴'
+  const icon = confidence === 'high' ? '🟢' : confidence === 'medium' ? '🟡' : '🔴'
   await send(
     `🛠 <b>Фикс сгенерирован</b>\n\n` +
     `📍 <code>${error.route}</code>\n` +
-    `${confIcon} Уверенность Claude: <b>${confidence}</b>\n` +
+    `${icon} Уверенность: <b>${confidence}</b>\n` +
     `🌿 Ветка: <code>${log.branch_name}</code>\n` +
     `🔗 PR: ${log.pr_url}\n\n` +
-    `⏳ Запускаем CI/CD тесты...`
+    `⏳ CI/CD тесты...`
   )
 }
 
-/** Тесты прошли, мерж выполнен */
 export async function alertMergedAndDeployed(
   error: SystemError,
-  log: AiHealingLog
+  log: Partial<AiHealingLog>
 ): Promise<void> {
   await send(
     `✅ <b>Исправлено и задеплоено</b>\n\n` +
@@ -64,64 +58,64 @@ export async function alertMergedAndDeployed(
     `🧪 Тест: PASS ✓\n` +
     `🏗 Билд: SUCCESS ✓\n` +
     `🚀 Продакшн обновлён\n\n` +
-    `📊 Мониторинг Dead Man's Switch активен (15 мин)\n\n` +
-    `<b>Diff изменений:</b>\n<pre>${esc((log.generated_diff ?? '').slice(0, 800))}</pre>`
+    `⚡ Dead Man's Switch активен — мониторинг 15 мин\n` +
+    `(следующая ошибка на этом роуте = авто-откат)\n\n` +
+    `<b>Diff:</b>\n<pre>${esc((log.generated_diff ?? '').slice(0, 600))}</pre>`
   )
 }
 
-/** CI провалился */
 export async function alertCiFailed(
   error: SystemError,
   reason: string
 ): Promise<void> {
   await send(
-    `❌ <b>CI/CD провалился</b> | Self-Healing остановлен\n\n` +
+    `❌ <b>CI провалился</b> | Остановлено\n\n` +
     `📍 <code>${error.route}</code>\n` +
-    `💥 Причина: ${esc(reason)}\n\n` +
+    `💥 ${esc(reason)}\n\n` +
     `⚠️ Требуется ручное исправление.`
   )
 }
 
-/** Dead Man's Switch сработал — авто-откат */
+/**
+ * @param isAutomatic true = Dead Man's Switch (событийный), false = ручной rollback из UI
+ */
 export async function alertRollbackTriggered(
-  error: SystemError,
-  prevDeployId: string
+  error: Pick<SystemError, 'route' | 'error_message'>,
+  prevDeployId: string,
+  isAutomatic = false
 ): Promise<void> {
+  const prefix = isAutomatic
+    ? `🚨 <b>АВТО-ОТКАТ</b> | Dead Man's Switch`
+    : `↩️ <b>РУЧНОЙ ОТКАТ</b> | Админ`
+
   await send(
-    `🚨 <b>АВТО-ОТКАТ</b> | Dead Man's Switch\n\n` +
+    `${prefix}\n\n` +
     `📍 <code>${error.route}</code>\n` +
-    `🔁 Откат на деплой: <code>${prevDeployId}</code>\n\n` +
-    `После исправления новая ошибка в том же модуле была обнаружена в течение 15 минут.\n` +
-    `Продакшн откатан на предыдущий стабильный деплой.\n\n` +
-    `⚠️ Требуется ручное расследование!`
+    `❗ <code>${esc(error.error_message)}</code>\n\n` +
+    `🔁 Откат на: <code>${prevDeployId}</code>\n` +
+    (isAutomatic
+      ? `\nНовая ошибка в том же модуле обнаружена в течение 15 мин после деплоя.\n` +
+        `Claude заблокирован. Продакшн откатан.\n\n⚠️ Требуется ручное расследование!`
+      : `\nОткат выполнен по команде администратора.`)
   )
 }
 
-/** Лимит попыток исчерпан */
 export async function alertMaxAttemptsReached(route: string): Promise<void> {
   await send(
     `🛑 <b>Лимит попыток исчерпан</b>\n\n` +
     `📍 <code>${route}</code>\n` +
-    `Система совершила 2 попытки авто-исправления — обе неудачны.\n` +
+    `Система совершила 2 попытки — обе неудачны.\n` +
     `Дальнейшие попытки заблокированы.\n\n` +
     `⚠️ Требуется ручное вмешательство.`
   )
 }
 
-// ─── helpers ─────────────────────────────────────────────────────────────────
-
-function esc(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
+function esc(t: string): string {
+  return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 async function send(text: string): Promise<void> {
   const chatId = ADMIN_CHAT_ID()
-  if (!chatId) {
-    console.warn('[self-healing] TELEGRAM_ADMIN_CHAT_ID not set')
-    return
-  }
+  if (!chatId) { console.warn('[self-healing] TELEGRAM_ADMIN_CHAT_ID not set'); return }
   await sendTelegramMessage(chatId, text)
 }

@@ -1,10 +1,18 @@
 /**
- * self-healing/db.ts
- * Все операции с БД для системы self-healing
+ * lib/self-healing/db.ts
+ * Все операции с Supabase для системы self-healing.
+ *
+ * Dead Man's Switch — STATELESS паттерн:
+ * checkDeadManSwitch() вызывается при каждом новом перехвате ошибки.
+ * Если для роута есть merged лог < 15 мин назад → деградация → rollback.
+ * Никакого setTimeout, никакого состояния в памяти — только запросы к БД.
  */
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
-import type { SystemError, AiHealingLog, HealingStatus, ErrorSeverity } from './types'
-import { CRITICAL_PATHS, MAX_HEALING_ATTEMPTS } from './types'
+import type {
+  SystemError, AiHealingLog, HealingStatus,
+  ErrorSeverity, DeadManCheckResult,
+} from './types'
+import { isCriticalPath, MAX_HEALING_ATTEMPTS, DEAD_MAN_SWITCH_WINDOW_MS } from './types'
 
 const svc = () => createSupabaseServiceClient()
 
@@ -22,16 +30,15 @@ export interface CreateErrorPayload {
 }
 
 /**
- * Записать новую ошибку. Возвращает запись с attempt_count.
- * Если та же ошибка (route + message) уже есть — инкрементируем attempt_count.
+ * Записать новую ошибку или инкрементировать attempt_count у существующей.
+ * Возвращает null если лимит попыток уже исчерпан (не трогать).
  */
 export async function upsertSystemError(
   payload: CreateErrorPayload
 ): Promise<SystemError | null> {
   const db = svc()
-  const isCritical = CRITICAL_PATHS.some(p => payload.route.startsWith(p))
 
-  // Ищем существующую незалеченную ошибку с тем же fingerprint
+  // Ищем незалеченную ошибку с тем же fingerprint (route + message)
   const { data: existing } = await db
     .from('system_errors')
     .select('*')
@@ -43,46 +50,40 @@ export async function upsertSystemError(
     .maybeSingle()
 
   if (existing) {
-    // Проверяем лимит попыток ДО инкремента
     if (existing.attempt_count >= MAX_HEALING_ATTEMPTS) {
-      console.warn(`[self-healing] Max attempts reached for error ${existing.id}`)
-      return null // сигнал: не трогать
+      console.warn(`[self-healing] Max attempts (${MAX_HEALING_ATTEMPTS}) reached for ${existing.id}`)
+      return null
     }
-
-    const { data: updated } = await db
+    const { data } = await db
       .from('system_errors')
-      .update({
-        attempt_count: existing.attempt_count + 1,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ attempt_count: existing.attempt_count + 1 })
       .eq('id', existing.id)
       .select()
       .single()
-    return updated as SystemError
+    return data as SystemError
   }
 
-  // Новая ошибка
-  const { data: created } = await db
+  const { data } = await db
     .from('system_errors')
     .insert({
       ...payload,
-      is_critical_path: isCritical,
+      is_critical_path: isCriticalPath(payload.route),
       attempt_count: 0,
       healed: false,
     })
     .select()
     .single()
-  return created as SystemError
+  return data as SystemError
 }
 
 export async function markErrorHealed(errorId: string): Promise<void> {
   await svc()
     .from('system_errors')
-    .update({ healed: true, updated_at: new Date().toISOString() })
+    .update({ healed: true })
     .eq('id', errorId)
 }
 
-// ─── ai_healing_logs ─────────────────────────────────────────────────────────
+// ─── ai_healing_logs ──────────────────────────────────────────────────────────
 
 export async function createHealingLog(
   errorId: string,
@@ -102,29 +103,53 @@ export async function updateHealingLog(
 ): Promise<void> {
   await svc()
     .from('ai_healing_logs')
-    .update({ ...patch, updated_at: new Date().toISOString() })
+    .update(patch)
     .eq('id', logId)
 }
 
+// ─── Dead Man's Switch (Stateless) ────────────────────────────────────────────
+
 /**
- * Dead Man's Switch: новая ошибка в том же модуле в течение 15 мин после деплоя?
+ * КЛЮЧЕВАЯ ФУНКЦИЯ — вызывается в начале каждого нового перехвата ошибки.
+ *
+ * Проверяет: есть ли для этого роута лог со статусом 'merged'
+ * и merged_at < 15 минут назад?
+ *
+ * Если да → система задеплоила "фикс" который сломал тот же роут снова.
+ * Это деградация. Нужен немедленный rollback.
+ *
+ * Никакого setTimeout. Чисто event-driven:
+ * новая ошибка → запрос в БД → решение → rollback или нет.
  */
 export async function checkDeadManSwitch(
-  route: string,
-  deployedAt: string
-): Promise<boolean> {
-  const windowStart = new Date(deployedAt).toISOString()
+  route: string
+): Promise<DeadManCheckResult> {
+  const windowStart = new Date(Date.now() - DEAD_MAN_SWITCH_WINDOW_MS).toISOString()
+
+  // Ищем merged лог для этого роута в течение последних 15 минут
   const { data } = await svc()
-    .from('system_errors')
-    .select('id')
-    .eq('route', route)
-    .gte('created_at', windowStart)
-    .eq('healed', false)
+    .from('ai_healing_logs')
+    .select(`
+      *,
+      system_errors!inner ( route )
+    `)
+    .eq('status', 'merged')
+    .eq('system_errors.route', route)
+    .gte('merged_at', windowStart)
+    .not('previous_deployment_id', 'is', null)
+    .order('merged_at', { ascending: false })
     .limit(1)
-  return (data?.length ?? 0) > 0
+    .maybeSingle()
+
+  if (!data) {
+    return { shouldRollback: false, healingLog: null }
+  }
+
+  return { shouldRollback: true, healingLog: data as AiHealingLog }
 }
 
-/** Уведомить пользователя через таблицу notifications (Realtime подхватит) */
+// ─── Уведомления пользователей (Supabase Realtime) ───────────────────────────
+
 export async function insertUserNotification(
   orgId: string,
   title: string,

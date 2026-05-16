@@ -261,18 +261,23 @@ JSON schema: {"analysis":"string","fixedCode":"string","diff":"string","testCode
 
     // Мерж
     await gh(`/pulls/${pr.number}/merge`, { method: 'PUT', body: JSON.stringify({ commit_title: `fix: auto-heal bug-${errId.slice(0,8)}`, merge_method: 'squash' }) })
-    await gh(`/git/refs/heads/${branch}`, { method: 'DELETE' })
+    await gh(`/git/refs/heads/${branch}`, { method: 'DELETE' }).catch(() => {}) // ветка может уже не существовать
     await dbUpdate('system_errors', `id=eq.${errId}`, { healed: true })
 
-    const newDeploys = await vr(`/v6/deployments?projectId=${VERCEL_PID}&target=production&limit=1`)
-    const newDeployId = newDeploys.deployments?.[0]?.uid ?? null
+    // Получаем ID нового деплоя — может быть ещё BUILDING, не падаем
+    let newDeployId: string | null = null
+    try {
+      const newDeploys = await vr(`/v6/deployments?projectId=${VERCEL_PID}&target=production&limit=1`)
+      newDeployId = newDeploys.deployments?.[0]?.uid ?? null
+    } catch (_) { /* деплой ещё не появился — OK */ }
 
     await dbUpdate('ai_healing_logs', `id=eq.${log.id}`, {
       status: 'merged', merged_at: new Date().toISOString(),
       deployment_id: newDeployId, previous_deployment_id: prevDeploy?.uid ?? null
     })
 
-    await tg(`✅ <b>ИСПРАВЛЕНО!</b>\n📍 <code>${route}</code>\n🧪 Тест: PASS\n🏗 Билд: OK\n🚀 Задеплоено\n⚡ DMS активен 15 мин\n\n${esc(p.analysis.slice(0,200))}`)
+    await tg(`✅ <b>ИСПРАВЛЕНО!</b>\n📍 <code>${route}</code>\n🧪 Тест: PASS\n🏗 Билд: OK\n🚀 Мерж выполнен\n⚡ DMS активен 15 мин\n\n${esc(p.analysis.slice(0,200))}`)
+      
 
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)

@@ -255,11 +255,12 @@ async function processEntry(entry: VercelLogEntry): Promise<void> {
 
 // ── Vercel endpoint verification (GET) ───────────────────────────────────────
 // Vercel проверяет endpoint перед регистрацией Log Drain.
-// Шлёт GET и ожидает заголовок x-vercel-verify со значением из ошибки регистрации.
+// xVercelVerify — публичный идентификатор drain'а, не секрет (не хранить в .env).
+const VERCEL_LOG_DRAIN_VERIFY = '97444b6f2922427284b5ba885948678f83316b90'
+
 export async function GET(): Promise<NextResponse> {
-  const verifyToken = process.env.VERCEL_LOG_DRAIN_VERIFY ?? ''
   return new NextResponse(null, {
     status: 200,
-    headers: { 'x-vercel-verify': verifyToken },
+    headers: { 'x-vercel-verify': VERCEL_LOG_DRAIN_VERIFY },
   })
 }

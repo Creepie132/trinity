@@ -27,6 +27,8 @@ export interface CreateErrorPayload {
   error_stack: string | null
   request_body: Record<string, unknown> | null
   severity: ErrorSeverity
+  /** SHA-256 хэш (route + message) для дедупликации Log Drain и global capture */
+  dedup_hash?: string | null
 }
 
 /**
@@ -67,6 +69,7 @@ export async function upsertSystemError(
     .from('system_errors')
     .insert({
       ...payload,
+      dedup_hash: payload.dedup_hash ?? null,
       is_critical_path: isCriticalPath(payload.route),
       attempt_count: 0,
       healed: false,

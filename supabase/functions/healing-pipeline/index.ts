@@ -19,6 +19,27 @@ const CRITICAL = ['/api/payments','/api/auth','/api/billing','/api/tranzila','/a
 const DMS_MS   = 15 * 60 * 1000
 const sleep    = (ms: number) => new Promise(r => setTimeout(r, ms))
 
+// ── Supabase admin notification helper ───────────────────────────────────────
+// Отправляет уведомление суперадмину через таблицу notifications
+// org_id = null означает системное уведомление (суперадмин видит их отдельно)
+async function notifyAdmin(title: string, body: string, type = 'system_healing') {
+  // Получаем org_id суперадмина из admin_users
+  const adminsRes = await fetch(`${SUPABASE_URL}/rest/v1/admin_users?select=user_id&limit=5`, {
+    headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+  })
+  const admins = await adminsRes.json().catch(() => [])
+
+  // Вставляем уведомление без org_id — оно будет видно в admin панели
+  await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+    method: 'POST',
+    headers: {
+      'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ org_id: null, type, title, body, read: false }),
+  }).catch(() => {})
+}
+
 // ── Supabase helpers ──────────────────────────────────────────────────────────
 
 async function dbSelect(table: string, query: string) {
@@ -160,6 +181,7 @@ Deno.serve(async (req: Request) => {
 
   const isCritical = CRITICAL.some(p => route.startsWith(p))
   await tg(`🔍 <b>Self-Healing</b>\n📍 <code>${route}</code>\n❗ <code>${esc(errMsg)}</code>\n⏳ Claude анализирует...`)
+  await notifyAdmin(`🔍 Self-Healing: обнаружена ошибка`, `${route} — ${errMsg.slice(0,120)}\nClaude анализирует...`)
 
   try {
     // Получаем исходный код
@@ -223,6 +245,7 @@ JSON schema: {"analysis":"string","fixedCode":"string","diff":"string","testCode
     }
 
     await tg(`🛠 <b>Фикс готов</b>\n📍 <code>${route}</code>\n🌿 <code>${branch}</code>\n🔗 ${pr.html_url}\n⏳ CI...`)
+    await notifyAdmin(`🛠 Фикс создан`, `${route}\nВетка: ${branch}\nPR: ${pr.html_url}\nTesting...`)
     await dbUpdate('ai_healing_logs', `id=eq.${log.id}`, { status: 'testing' })
 
     // Сохраняем prev deploy
@@ -277,6 +300,7 @@ JSON schema: {"analysis":"string","fixedCode":"string","diff":"string","testCode
     })
 
     await tg(`✅ <b>ИСПРАВЛЕНО!</b>\n📍 <code>${route}</code>\n🧪 Тест: PASS\n🏗 Билд: OK\n🚀 Мерж выполнен\n⚡ DMS активен 15 мин\n\n${esc(p.analysis.slice(0,200))}`)
+    await notifyAdmin(`✅ Баг исправлен автоматически`, `${route}\n${p.analysis.slice(0,200)}\n\nМерж выполнен. Dead Man's Switch активен 15 мин.`, 'system_healed')
       
 
   } catch (e: unknown) {

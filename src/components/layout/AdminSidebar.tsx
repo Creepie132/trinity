@@ -3,16 +3,36 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Megaphone, Settings, Home, LogOut, Building2, CreditCard, BarChart3, HeadphonesIcon, Monitor, LineChart, Bot, AlertTriangle } from 'lucide-react'
+import { LayoutDashboard, Megaphone, Settings, Home, LogOut, Building2, CreditCard, BarChart3, HeadphonesIcon, Monitor, LineChart, Bot, AlertTriangle, Zap } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Separator } from '@/components/ui/separator'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useEffect, useState } from 'react'
 
 export function AdminSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { signOut } = useAuth()
   const { t, language } = useLanguage()
+  const [activeHealings, setActiveHealings] = useState(0)
+
+  // Считаем активные healings для badge
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient()
+    const load = async () => {
+      const { count } = await supabase
+        .from('ai_healing_logs')
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['analyzing', 'fix_generated', 'testing'])
+      setActiveHealings(count ?? 0)
+    }
+    load()
+    const ch = supabase.channel('sidebar-healing')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_healing_logs' }, load)
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [])
 
   const onLogout = async () => {
     await signOut()
@@ -32,6 +52,12 @@ export function AdminSidebar() {
     { name: language === 'he' ? 'מצגות' : 'Презентации', href: '/admin/presentations', icon: Monitor },
     { name: language === 'he' ? 'סטטיסטיקת תנועה' : 'Трафик лендинга', href: '/admin/stats', icon: LineChart },
     { name: language === 'he' ? 'בוט אישי' : 'Личный бот', href: '/admin/personal-bot', icon: Bot },
+    {
+      name: language === 'he' ? 'תיקונים אוטומטיים' : 'Авто-исправления',
+      href: '/admin/healing',
+      icon: Zap,
+      badge: activeHealings > 0 ? activeHealings : undefined,
+    },
   ]
 
   return (
@@ -62,7 +88,12 @@ export function AdminSidebar() {
                 <Icon className={cn('w-5 h-5 flex-shrink-0', isActive ? 'text-white' : 'text-blue-400')} />
               </div>
               <span className="flex-1">{item.name}</span>
-              {isActive && <div className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />}
+              {(item as any).badge && (
+                <span className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse font-bold">
+                  {(item as any).badge}
+                </span>
+              )}
+              {isActive && !((item as any).badge) && <div className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />}
             </Link>
           )
         })}

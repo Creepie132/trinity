@@ -172,7 +172,7 @@ Deno.serve(async (req: Request) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514', max_tokens: 4096,
+        model: 'claude-sonnet-4-6', max_tokens: 4096,
         system: `You are an expert TypeScript/Next.js engineer performing automated bug repair for a production CRM system called Trinity.
 CRITICAL RULES:
 1. Respond with valid JSON ONLY — no markdown, no explanation outside JSON

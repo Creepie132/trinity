@@ -16,10 +16,6 @@ async function handleGET(_request: NextRequest) {
   const { orgId } = auth
   const service = createSupabaseServiceClient()
 
-  // BUG_INJECT: TypeError — intentional null dereference for self-healing test
-  const buggyConfig: any = null
-  const _unused = buggyConfig.nonExistentProperty
-
   const [totalResult, activeResult] = await Promise.all([
     service
       .from('visits')

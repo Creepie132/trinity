@@ -5,6 +5,7 @@ import { enforceDemoLimit } from '@/lib/demo-limits'
 import { enforcePlanLimit } from '@/lib/plan-limits'
 import { dispatchNotification } from '@/lib/dispatch-notification'
 import { fireWaTrigger } from '@/lib/wa/fire-trigger'
+import { withErrorCapture } from '@/lib/self-healing'
 
 const supabaseAdmin = createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,7 +34,7 @@ async function getRelatedOrgIds(orgId: string): Promise<string[]> {
   return Array.from(ids)
 }
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   try {
     const auth = await getAuthContext(req)
     if ('error' in auth) return auth.error
@@ -44,8 +45,6 @@ export async function GET(req: NextRequest) {
 
     // Resolve all org IDs in the branch family for shared client access
     const relatedOrgIds = await getRelatedOrgIds(orgId)
-
-    // Build query — visits/sales count для индикатора активности в мобиле
     let query = supabaseAdmin
       .from('clients')
       .select('*, visits(count), sales(count)')
@@ -101,7 +100,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   try {
     const auth = await getAuthContext(req)
     if ('error' in auth) return auth.error
@@ -179,3 +178,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
+
+// ─── Self-Healing: обёрнутые экспорты ────────────────────────────────────────
+export const GET  = withErrorCapture(handleGET,  '/api/clients')
+export const POST = withErrorCapture(handlePOST, '/api/clients')

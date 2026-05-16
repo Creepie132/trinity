@@ -252,3 +252,14 @@ async function processEntry(entry: VercelLogEntry): Promise<void> {
     console.error('[vercel-logs] pipeline error:', e)
   )
 }
+
+// ── Vercel endpoint verification (GET) ───────────────────────────────────────
+// Vercel проверяет endpoint перед регистрацией Log Drain.
+// Шлёт GET и ожидает заголовок x-vercel-verify со значением из ошибки регистрации.
+export async function GET(): Promise<NextResponse> {
+  const verifyToken = process.env.VERCEL_LOG_DRAIN_VERIFY ?? ''
+  return new NextResponse(null, {
+    status: 200,
+    headers: { 'x-vercel-verify': verifyToken },
+  })
+}

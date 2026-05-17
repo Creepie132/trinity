@@ -218,7 +218,14 @@ export function QuickVisitModal({ open, onClose, clientId, clientName }: QuickVi
       fetch('/api/products').then(r => r.ok ? r.json() : {}) as Promise<any>,
     ]).then(([svcs, prods]) => {
       const svcList: ServiceOption[] = svcs.services || svcs.data || (Array.isArray(svcs) ? svcs : [])
-      const prodList: ProductOption[] = prods.products || prods.data || (Array.isArray(prods) ? prods : [])
+      const rawProds: any[] = prods.products || prods.data || (Array.isArray(prods) ? prods : [])
+      // Products API returns sell_price, map to ProductOption.price
+      const prodList: ProductOption[] = rawProds.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        price: typeof p.sell_price === 'number' ? p.sell_price : (typeof p.price === 'number' ? p.price : 0),
+        stock_quantity: p.quantity ?? p.stock_quantity,
+      }))
       setServices(svcList)
       setProducts(prodList)
     }).catch(() => {}).finally(() => setLoadingOptions(false))

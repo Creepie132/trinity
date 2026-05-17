@@ -90,8 +90,6 @@ const withPWA = require('@ducanh2912/next-pwa').default({
 const nextConfig = {
   experimental: {
     // serverActions: true — deprecated boolean form, always enabled in Next.js 15+
-    // instrumentationHook: включает instrumentation.ts для глобального перехвата ошибок
-    instrumentationHook: true,
   },
 
   // ─── Images ─────────────────────────────────────────────────────────────

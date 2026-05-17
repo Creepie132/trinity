@@ -162,6 +162,9 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
       setConfirmDeleteSale(false)
       queryClient.invalidateQueries({ queryKey: ['sales'] })
       queryClient.invalidateQueries({ queryKey: ['payments'] })
+      // БАГ-004 fix: инвалидируем продукты/инвентарь — stock пересчитан на сервере
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory'] })
       onClose()
     } catch { toast.error(t.deleteError) }
     finally { setDeleting(false) }

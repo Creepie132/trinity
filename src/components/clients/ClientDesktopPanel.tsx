@@ -6,6 +6,7 @@ import { useClientSelfEditLink } from '@/hooks/useClientSelfEditLink'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useAuth } from '@/hooks/useAuth'
+import { useOrganization } from '@/hooks/useOrganization'
 import { useOrgTemplates } from '@/hooks/useOrgTemplates'
 import { buildMessage, buildWhatsAppUrl } from '@/lib/message-utils'
 import { getClientName } from '@/lib/client-utils'
@@ -28,6 +29,7 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
   const [loading, setLoading] = useState(false)
   const features = useFeatures()
   const { orgId } = useAuth()
+  const { data: orgData } = useOrganization()
   const { templates } = useOrgTemplates()
   const supabase = createSupabaseBrowserClient()
 
@@ -64,6 +66,30 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
   
   const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500', 'bg-rose-500', 'bg-cyan-500']
   const avatarColor = colors[(client?.first_name || '').charCodeAt(0) % colors.length]
+
+  // БАГ-005 fix: terminal из org settings, не хардкод
+  // tranzila_token_terminal — для токенизации карт (VK tranmode)
+  const tranzilaTerminal = (orgData as any)?.tranzila_token_terminal || ''
+
+  function openTranzilaTokenWindow() {
+    if (!tranzilaTerminal) {
+      toast.error(locale === 'he'
+        ? 'טרמינל Tranzila לא מוגדר עבור הארגון'
+        : 'Терминал Tranzila не настроен для организации')
+      return
+    }
+    const baseUrl = `https://direct.tranzila.com/${tranzilaTerminal}/iframenew.php`
+    const params = new URLSearchParams({
+      hidesum: '1',
+      currency: '1',
+      tranmode: 'VK',
+      cred_type: '1',
+      lang: locale === 'he' ? 'heb' : 'rus',
+      ok_url: `${window.location.origin}/api/payments/tranzila-token-callback?client_id=${client.id}`,
+      fail_url: `${window.location.origin}/api/payments/tranzila-token-callback?client_id=${client.id}&fail=1`,
+    })
+    window.open(`${baseUrl}?${params}`, '_blank', 'width=500,height=600')
+  }
 
   useEffect(() => {
     const d = new Date()
@@ -719,19 +745,7 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
                           : 'Для автоматических списаний нужно привязать карту клиента'}
                       </p>
                       <button
-                        onClick={() => {
-                          const baseUrl = 'https://direct.tranzila.com/hrehabtok/iframenew.php'
-                          const params = new URLSearchParams({
-                            hidesum: '1',
-                            currency: '1',
-                            tranmode: 'VK',
-                            cred_type: '1',
-                            lang: locale === 'he' ? 'heb' : 'rus',
-                            ok_url: `${window.location.origin}/api/payments/tranzila-token-callback?client_id=${client.id}`,
-                            fail_url: `${window.location.origin}/api/payments/tranzila-token-callback?client_id=${client.id}&fail=1`,
-                          })
-                          window.open(`${baseUrl}?${params}`, '_blank', 'width=500,height=600')
-                        }}
+                        onClick={openTranzilaTokenWindow}
                         className="px-4 py-2 rounded-xl bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 transition"
                       >
                         {locale === 'he' ? '💳 קשר כרטיס' : '💳 Привязать карту'}
@@ -743,19 +757,7 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
                         💳 {locale === 'he' ? `כרטיס: **** ${client.card_last4 || '****'}` : `Карта: **** ${client.card_last4 || '****'}`}
                       </p>
                       <button
-                        onClick={() => {
-                          const baseUrl = 'https://direct.tranzila.com/hrehabtok/iframenew.php'
-                          const params = new URLSearchParams({
-                            hidesum: '1',
-                            currency: '1',
-                            tranmode: 'VK',
-                            cred_type: '1',
-                            lang: locale === 'he' ? 'heb' : 'rus',
-                            ok_url: `${window.location.origin}/api/payments/tranzila-token-callback?client_id=${client.id}`,
-                            fail_url: `${window.location.origin}/api/payments/tranzila-token-callback?client_id=${client.id}&fail=1`,
-                          })
-                          window.open(`${baseUrl}?${params}`, '_blank', 'width=500,height=600')
-                        }}
+                        onClick={openTranzilaTokenWindow}
                         className="text-xs text-muted-foreground hover:text-foreground underline"
                       >
                         {locale === 'he' ? 'החלף כרטיס' : 'Заменить'}

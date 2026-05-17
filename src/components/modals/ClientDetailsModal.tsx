@@ -3,6 +3,7 @@
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
+import { TrinityMobDetailShell } from '@/components/ui/TrinityMobDetailShell'
 import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart, X, ChevronRight, Images, FileText, Paintbrush, Settings2, User, CalendarPlus, Navigation } from 'lucide-react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { useState, useEffect } from 'react'
@@ -64,8 +65,6 @@ export function ClientDetailsModal() {
 
   // Не рендерим до mount
   if (!mounted) return null
-  // На мобиле — TrinityMob
-  if (isMobile && !showGdprDialog) return null
 
   // GdprDeleteDialog рендерим отдельно — он не зависит от isOpen/isMobile
   if (!data?.client || !isOpen) {
@@ -76,19 +75,6 @@ export function ClientDetailsModal() {
         clientId={data?.client?.id || ''}
         clientName={data?.client ? getClientName(data.client) : ''}
         locale={(data?.locale || 'ru') as 'he' | 'ru'}
-      />
-    ) : null
-  }
-
-  // На мобиле показываем только GdprDeleteDialog если он открыт
-  if (isMobile) {
-    return showGdprDialog ? (
-      <GdprDeleteDialog
-        open={showGdprDialog}
-        onOpenChange={setShowGdprDialog}
-        clientId={data.client.id}
-        clientName={getClientName(data.client)}
-        locale={(data.locale || 'ru') as 'he' | 'ru'}
       />
     ) : null
   }
@@ -109,13 +95,13 @@ export function ClientDetailsModal() {
   }
   const t = T[locale as keyof typeof T] || T.he
 
-  // БАГ #1 fix: после редактирования — обновляем client в store
+  // БАГ #3 fix: передаём свежий updated напрямую, не мёрджим со старым client из замыкания
   const handleEditClick = () => {
     closeModal('client-details')
     openModal('client-edit', {
       client, locale,
       onSaved: (updated: any) => {
-        openModal('client-details', { ...data, client: { ...client, ...updated }, locale })
+        openModal('client-details', { ...data, client: updated, locale })
       }
     })
   }
@@ -178,6 +164,87 @@ export function ClientDetailsModal() {
       return
     }
     openWhatsAppWithVars(pendingVars)
+  }
+
+  // ── БАГ-001 FIX: мобильный рендер через TrinityMobDetailShell ────────────────
+  if (isMobile) {
+    const mobActions = [
+      {
+        icon: <CalendarPlus size={13} />,
+        label: t.newVisit,
+        onClick: () => { closeModal('client-details'); openModal('visit-unified', { mode: 'create', clientId: client.id }) },
+        variant: 'green' as const,
+      },
+      {
+        icon: <ShoppingCart size={13} />,
+        label: t.sale,
+        onClick: () => openModal('sale-unified', { clientId: client.id, clientName }),
+        variant: 'default' as const,
+      },
+      ...(client.phone ? [{
+        icon: <MessageCircle size={13} />,
+        label: 'WhatsApp',
+        onClick: handleWhatsApp,
+        variant: 'green' as const,
+      }, {
+        icon: <Phone size={13} />,
+        label: t.call,
+        onClick: handleCall,
+        variant: 'default' as const,
+      }] : []),
+      ...(isQuickMode ? [{
+        icon: <Zap size={13} />,
+        label: isHe ? 'ביקור מהיר' : 'Быстрый визит',
+        onClick: () => setQuickVisitOpen(true),
+        variant: 'purple' as const,
+      }] : []),
+      {
+        icon: <Pencil size={13} />,
+        label: t.edit,
+        onClick: handleEditClick,
+        variant: 'default' as const,
+      },
+      {
+        icon: <Trash2 size={13} />,
+        label: t.delete,
+        onClick: handleDeleteClick,
+        variant: 'danger' as const,
+      },
+    ]
+    return (
+      <>
+        <TrinityMobDetailShell
+          open={isOpen}
+          onClose={() => closeModal('client-details')}
+          title={clientName}
+          subtitle={client.phone || (isHe ? 'פרטי לקוח' : 'Данные клиента')}
+          avatarContent={initials}
+          avatarBg={`linear-gradient(135deg, ${g1}, ${g2})`}
+          actions={mobActions}
+          actionsTitle={isHe ? 'פעולות' : 'Действия'}
+          locale={locale as 'he' | 'ru'}
+        >
+          <div className="space-y-3">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+              <div style={{ background: 'rgba(167,139,250,0.12)', borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#a78bfa' }}>₪{Number(totalPaid).toLocaleString()}</div>
+                <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', marginTop: 2 }}>{t.totalPaid}</div>
+              </div>
+              <div style={{ background: 'rgba(96,165,250,0.12)', borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#60a5fa' }}>{visitsCount}</div>
+                <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', marginTop: 2 }}>{t.visits}</div>
+              </div>
+            </div>
+            {client.email && <div style={{ display:'flex',justifyContent:'space-between',padding:'8px 12px',background:'rgba(255,255,255,0.06)',borderRadius:10 }}><span style={{ fontSize:11,color:'rgba(255,255,255,0.4)' }}>Email</span><span style={{ fontSize:11,color:'rgba(255,255,255,0.8)' }}>{client.email}</span></div>}
+            {(client.address||client.city) && <div style={{ display:'flex',justifyContent:'space-between',padding:'8px 12px',background:'rgba(255,255,255,0.06)',borderRadius:10 }}><span style={{ fontSize:11,color:'rgba(255,255,255,0.4)' }}>{t.address}</span><span style={{ fontSize:11,color:'rgba(255,255,255,0.8)' }}>{[client.address,client.city].filter(Boolean).join(', ')}</span></div>}
+            {client.date_of_birth && <div style={{ display:'flex',justifyContent:'space-between',padding:'8px 12px',background:'rgba(255,255,255,0.06)',borderRadius:10 }}><span style={{ fontSize:11,color:'rgba(255,255,255,0.4)' }}>{t.birthday}</span><span style={{ fontSize:11,color:'rgba(255,255,255,0.8)' }}>{new Date(client.date_of_birth).toLocaleDateString(isHe?'he-IL':'ru-RU')}</span></div>}
+            {client.notes && <div style={{ padding:'8px 12px',background:'rgba(251,191,36,0.08)',border:'0.5px solid rgba(251,191,36,0.2)',borderRadius:10 }}><p style={{ fontSize:11,color:'rgba(255,255,255,0.7)',lineHeight:1.5,margin:0 }}>{client.notes}</p></div>}
+          </div>
+        </TrinityMobDetailShell>
+        <GdprDeleteDialog open={showGdprDialog} onOpenChange={setShowGdprDialog} clientId={client.id} clientName={clientName} locale={locale as 'he'|'ru'} />
+        {isQuickMode && <QuickVisitModal open={quickVisitOpen} onClose={() => setQuickVisitOpen(false)} clientId={client.id} clientName={clientName} />}
+      </>
+    )
   }
 
   // ── Sidebar ──

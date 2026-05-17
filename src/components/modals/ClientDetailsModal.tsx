@@ -38,6 +38,11 @@ export function ClientDetailsModal() {
   const [isMobile, setIsMobile] = useState(false)
   const [mounted, setMounted] = useState(false)
   const { templates } = useOrgTemplates()
+  // Вкладки правой части (только десктоп)
+  const [activeTab, setActiveTab] = useState<'info' | 'visits' | 'payments'>('info')
+  const [tabVisits, setTabVisits] = useState<any[]>([])
+  const [tabPayments, setTabPayments] = useState<any[]>([])
+  const [tabLoading, setTabLoading] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
   const [pickerType, setPickerType] = useState<'visit' | 'product' | null>(null)
   const [pickerItems, setPickerItems] = useState<any[]>([])
@@ -62,6 +67,27 @@ export function ClientDetailsModal() {
       .then(photos => setPhotosCount(Array.isArray(photos) ? photos.length : 0))
       .catch(() => setPhotosCount(0))
   }, [isOpen, data?.client?.id])
+
+  // Загрузка данных для вкладок (lazy, только при открытии вкладки)
+  useEffect(() => {
+    if (!isOpen || !data?.client?.id || isMobile) return
+    if (activeTab === 'visits' && tabVisits.length === 0) {
+      setTabLoading(true)
+      fetch(`/api/clients/${data.client.id}/visits`)
+        .then(r => r.ok ? r.json() : [])
+        .then(v => setTabVisits(Array.isArray(v) ? v : []))
+        .catch(() => setTabVisits([]))
+        .finally(() => setTabLoading(false))
+    }
+    if (activeTab === 'payments' && tabPayments.length === 0) {
+      setTabLoading(true)
+      fetch(`/api/clients/${data.client.id}/payments`)
+        .then(r => r.ok ? r.json() : [])
+        .then(p => setTabPayments(Array.isArray(p) ? p : []))
+        .catch(() => setTabPayments([]))
+        .finally(() => setTabLoading(false))
+    }
+  }, [isOpen, data?.client?.id, activeTab, isMobile])
 
   // Не рендерим до mount
   if (!mounted) return null
@@ -384,16 +410,30 @@ export function ClientDetailsModal() {
             />
           ) : (
           <>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 16px', borderBottom:'0.5px solid #e8edf4', background:'transparent' }}>
-            <span style={{ fontSize:9, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em' }}>
-              {isHe ? 'כרטיס לקוח' : 'Карточка клиента'}
-            </span>
-            <button onClick={() => setShowSettings(true)}
-              style={{ width:26, height:26, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:'0.5px solid #e2e8f0', background:'#fff', color:'#94a3b8' }}>
-              <Settings2 size={13} />
-            </button>
+          {/* ── Таб-бар ── */}
+          <div style={{ display:'flex', borderBottom:'0.5px solid #e8edf4', background:'#fafbfc' }}>
+            {([
+              { key: 'info',     label: isHe ? 'מידע'    : 'Информация',  icon: '📋' },
+              { key: 'visits',   label: isHe ? 'תורים'   : 'Визиты',      icon: '📅' },
+              { key: 'payments', label: isHe ? 'תשלומים' : 'Платежи',     icon: '💳' },
+            ] as const).map(tab => (
+              <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                style={{
+                  flex: 1, padding: '10px 8px', fontSize: 11, fontWeight: 600,
+                  border: 'none', cursor: 'pointer', background: 'transparent',
+                  borderBottom: activeTab === tab.key ? '2px solid #6366f1' : '2px solid transparent',
+                  color: activeTab === tab.key ? '#6366f1' : '#94a3b8',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                  transition: 'color .15s',
+                }}>
+                <span>{tab.icon}</span>{tab.label}
+              </button>
+            ))}
           </div>
-          <div className="space-y-4" style={{ padding:'16px 16px 20px' }}>
+
+          {/* ── Контент вкладки: Информация ── */}
+          {activeTab === 'info' && (
+          <div className="space-y-4" style={{ padding:'16px 16px 20px', overflowY:'auto', maxHeight:'calc(100% - 80px)' }}>
             {quickAccessBlock}
             {(client.email || client.address || client.date_of_birth || client.created_at || (Array.isArray(client.preferred_languages) && client.preferred_languages.length > 0)) && (
               <div>
@@ -404,16 +444,8 @@ export function ClientDetailsModal() {
                     <div className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-xl">
                       <span className="text-xs text-gray-400 font-medium">{t.language}</span>
                       <span className="flex items-center gap-1.5 ms-2">
-                        {client.preferred_languages.includes('he') && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-gray-200 text-xs font-semibold text-gray-700">
-                            <span>🇮🇱</span><span>עברית</span>
-                          </span>
-                        )}
-                        {client.preferred_languages.includes('ru') && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-gray-200 text-xs font-semibold text-gray-700">
-                            <span>🇷🇺</span><span>Рус</span>
-                          </span>
-                        )}
+                        {client.preferred_languages.includes('he') && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-gray-200 text-xs font-semibold text-gray-700"><span>🇮🇱</span><span>עברית</span></span>}
+                        {client.preferred_languages.includes('ru') && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-gray-200 text-xs font-semibold text-gray-700"><span>🇷🇺</span><span>Рус</span></span>}
                       </span>
                     </div>
                   )}
@@ -442,6 +474,90 @@ export function ClientDetailsModal() {
               </div>
             )}
           </div>
+          )}
+
+          {/* ── Контент вкладки: Визиты ── */}
+          {activeTab === 'visits' && (
+          <div style={{ padding:'12px 16px', overflowY:'auto', maxHeight:'calc(100% - 80px)' }}>
+            {tabLoading ? (
+              <div className="space-y-2 mt-2">{[1,2,3].map(i=><div key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse"/>)}</div>
+            ) : tabVisits.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'32px 0', color:'#94a3b8', fontSize:13 }}>
+                📅 {isHe ? 'אין תורים עדיין' : 'Визитов пока нет'}
+              </div>
+            ) : (
+              <div className="space-y-1.5 mt-1">
+                {tabVisits.slice(0, 20).map((v: any) => {
+                  const date = new Date(v.scheduled_at || v.created_at)
+                  const statusColor: Record<string,string> = { completed:'#34d399', in_progress:'#fbbf24', cancelled:'#94a3b8', scheduled:'#60a5fa' }
+                  const col = statusColor[v.status] || '#94a3b8'
+                  return (
+                    <div key={v.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', background:'#f8fafc', borderRadius:12, border:'0.5px solid #e8edf4' }}>
+                      <div style={{ width:34, height:34, borderRadius:10, background:`${col}18`, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                        <span style={{ fontSize:13, fontWeight:700, color:col, lineHeight:1 }}>{date.getDate()}</span>
+                        <span style={{ fontSize:8, color:col, lineHeight:1 }}>{date.toLocaleString(isHe?'he-IL':'ru-RU',{month:'short'})}</span>
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <p style={{ fontSize:12, fontWeight:600, color:'#1e293b', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{v.service_name || (isHe?'ביקור':'Визит')}</p>
+                        <p style={{ fontSize:10, color:'#94a3b8', margin:0 }}>{date.toLocaleTimeString(isHe?'he-IL':'ru-RU',{hour:'2-digit',minute:'2-digit'})}</p>
+                      </div>
+                      <span style={{ fontSize:10, fontWeight:600, color:col, background:`${col}14`, padding:'2px 8px', borderRadius:20, flexShrink:0 }}>{v.status}</span>
+                      {v.price && <span style={{ fontSize:12, fontWeight:700, color:'#1e293b', flexShrink:0 }}>₪{v.price}</span>}
+                    </div>
+                  )
+                })}
+                {tabVisits.length > 20 && (
+                  <button onClick={() => { closeModal('client-details'); openModal('client-history', { client, locale, tab: 'visits' }) }}
+                    style={{ width:'100%', padding:'8px', border:'0.5px dashed #cbd5e1', borderRadius:10, fontSize:11, color:'#64748b', background:'transparent', cursor:'pointer', marginTop:4 }}>
+                    {isHe ? `עוד ${tabVisits.length - 20} תורים` : `Ещё ${tabVisits.length - 20} визитов`} →
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          )}
+
+          {/* ── Контент вкладки: Платежи ── */}
+          {activeTab === 'payments' && (
+          <div style={{ padding:'12px 16px', overflowY:'auto', maxHeight:'calc(100% - 80px)' }}>
+            {tabLoading ? (
+              <div className="space-y-2 mt-2">{[1,2,3].map(i=><div key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse"/>)}</div>
+            ) : tabPayments.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'32px 0', color:'#94a3b8', fontSize:13 }}>
+                💳 {isHe ? 'אין תשלומים עדיין' : 'Платежей пока нет'}
+              </div>
+            ) : (
+              <div className="space-y-1.5 mt-1">
+                {tabPayments.slice(0, 20).map((p: any) => {
+                  const statusColor: Record<string,string> = { completed:'#34d399', success:'#34d399', pending:'#fbbf24', failed:'#f87171', cancelled:'#94a3b8' }
+                  const col = statusColor[p.status] || '#94a3b8'
+                  const METHOD_ICON: Record<string,string> = { cash:'💵', card:'💳', credit_card:'💳', bit:'📱', transfer:'🏦' }
+                  return (
+                    <div key={p.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', background:'#f8fafc', borderRadius:12, border:'0.5px solid #e8edf4' }}>
+                      <div style={{ width:34, height:34, borderRadius:10, background:`${col}18`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:16 }}>
+                        {METHOD_ICON[p.method || p.payment_method] || '💵'}
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <p style={{ fontSize:12, fontWeight:600, color:'#1e293b', margin:0 }}>{new Date(p.created_at).toLocaleDateString(isHe?'he-IL':'ru-RU')}</p>
+                        <p style={{ fontSize:10, color:'#94a3b8', margin:0 }}>{p.method || p.payment_method || '—'}</p>
+                      </div>
+                      <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:2, flexShrink:0 }}>
+                        <span style={{ fontSize:13, fontWeight:800, color:'#1e293b' }}>₪{Number(p.amount || p.price || 0).toLocaleString()}</span>
+                        <span style={{ fontSize:9, fontWeight:600, color:col, background:`${col}14`, padding:'1px 6px', borderRadius:20 }}>{p.status}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+                {tabPayments.length > 20 && (
+                  <button onClick={() => { closeModal('client-details'); openModal('client-history', { client, locale, tab: 'payments' }) }}
+                    style={{ width:'100%', padding:'8px', border:'0.5px dashed #cbd5e1', borderRadius:10, fontSize:11, color:'#64748b', background:'transparent', cursor:'pointer', marginTop:4 }}>
+                    {isHe ? `עוד ${tabPayments.length - 20} תשלומים` : `Ещё ${tabPayments.length - 20} платежей`} →
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          )}
           </>
           )}
         </TrinityModalShell>

@@ -97,11 +97,17 @@ Generate a fix for this exact bug. Respond with JSON only.`
 // ─── Parser ───────────────────────────────────────────────────────────────────
 
 function parseClaudeResponse(text: string, filePath: string): HealingProposal {
-  // Убираем возможные markdown-блоки если Claude всё же добавил
-  const clean = text
-    .replace(/^```json\s*/i, '')
-    .replace(/```\s*$/i, '')
+  // 1. Убираем markdown-блоки
+  let clean = text
+    .replace(/^```json\s*/im, '')
+    .replace(/```\s*$/im, '')
     .trim()
+
+  // 2. Если Claude написал текст вокруг JSON — вырезаем JSON-объект
+  const jsonMatch = clean.match(/\{[\s\S]*\}/)
+  if (jsonMatch) {
+    clean = jsonMatch[0]
+  }
 
   let parsed: Partial<HealingProposal>
   try {

@@ -1,7 +1,7 @@
 /**
  * app/api/dev/simulate-crash/route.ts
  * Симулятор краш-тестов для проверки Self-Healing пайплайна.
- * ЗАЩИТА: только в development ИЛИ с валидным секретом.
+ * ВНИМАНИЕ: только в development ENV с валидным секретом.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { withErrorCapture } from '@/lib/self-healing/error-capture'
@@ -32,7 +32,7 @@ function generateError(type: CrashType): never {
 }
 
 async function handler(req: NextRequest): Promise<NextResponse> {
-  // ── Защита: только dev ИЛИ секрет ────────────────────────────────────────
+  // ── Защита: только dev ENV секрет ────────────────────────────────────────
   const isDev = process.env.NODE_ENV === 'development'
   const secret = req.headers.get('x-crash-secret')
   const validSecret = secret === process.env.SIMULATE_CRASH_SECRET
@@ -55,7 +55,27 @@ async function handler(req: NextRequest): Promise<NextResponse> {
 
   // ── Искусственно роняем ───────────────────────────────────────────────────
   console.log(`[simulate-crash] Triggering ${type} crash...`)
-  generateError(type)
+
+  try {
+    generateError(type)
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err))
+    console.error(`[simulate-crash] Caught simulated ${type} error:`, error.message)
+    return NextResponse.json(
+      {
+        simulated: true,
+        type,
+        error: error.message,
+        name: error.name,
+        // Include any extra properties (e.g. code for db_error)
+        ...(err instanceof Object ? { ...err as Record<string, unknown> } : {}),
+      },
+      { status: 500 }
+    )
+  }
+
+  // Should never reach here since generateError always throws
+  return NextResponse.json({ error: 'Simulation failed to trigger error' }, { status: 500 })
 }
 
 // Оборачиваем в withErrorCapture — именно так тестируем весь цикл
